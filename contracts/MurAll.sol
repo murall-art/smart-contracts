@@ -209,7 +209,7 @@ contract MurAll is ReentrancyGuard {
         return artists[userAddress];
     }
 
-    function getCostPerPixel() public view returns (uint256 costInWei) {
+    function getCostPerPixel() public pure returns (uint256 costInWei) {
         return PRICE_PER_PIXEL;
     }
 }
