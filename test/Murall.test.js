@@ -59,11 +59,15 @@ contract('MurAll', ([owner, user]) => {
             individualPixels[0] = pixelOutOfRange;
             const pixelGroups = Array(0);
             const pixelGroupIndexes = Array(0);
+            const metadata = Array(3);
+            metadata[0] = 1234;
+            metadata[1] = 5678;
+            metadata[2] = 4321;
 
             await setAllowance(6);
 
             await expectRevert(
-                this.contract.setPixels(individualPixels, pixelGroups, pixelGroupIndexes, { from: user }),
+                this.contract.setPixels(individualPixels, pixelGroups, pixelGroupIndexes, metadata, { from: user }),
                 'coord is out of range'
             );
         });
@@ -78,11 +82,15 @@ contract('MurAll', ([owner, user]) => {
             pixelGroups[0] = pixel;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupOutOfRange;
+            const metadata = Array(3);
+            metadata[0] = 1234;
+            metadata[1] = 5678;
+            metadata[2] = 4321;
 
             await setAllowance(16);
 
             await expectRevert(
-                this.contract.setPixels(individualPixels, pixelGroups, pixelGroupIndexes, { from: user }),
+                this.contract.setPixels(individualPixels, pixelGroups, pixelGroupIndexes, metadata, { from: user }),
                 'group is out of range'
             );
         });
@@ -100,10 +108,16 @@ contract('MurAll', ([owner, user]) => {
             pixelGroups[0] = pixelGroup;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndex;
+            const metadata = Array(3);
+            metadata[0] = 1234;
+            metadata[1] = 5678;
+            metadata[2] = 4321;
 
             await setAllowance(22);
 
-            const receipt = await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, { from: user });
+            const receipt = await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, metadata, {
+                from: user,
+            });
             // TODO the array data seems to be failing the assert even though the data is equal, needs investigation
             await expectEvent(receipt, 'Painted', {
                 sender: user,
@@ -126,13 +140,17 @@ contract('MurAll', ([owner, user]) => {
             pixelGroups[0] = pixelGroup;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndex;
+            const metadata = Array(3);
+            metadata[0] = 1234;
+            metadata[1] = 5678;
+            metadata[2] = 4321;
 
             await setAllowance(22);
 
             assert.equal(await this.contract.isArtist(user), false);
             assert.equal(await this.contract.totalArtists(), 0);
 
-            await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, { from: user });
+            await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, metadata, { from: user });
 
             assert.equal(await this.contract.isArtist(user), true);
             assert.equal(await this.contract.totalArtists(), 1);
@@ -150,18 +168,22 @@ contract('MurAll', ([owner, user]) => {
             pixelGroups[0] = pixelGroup;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndex;
+            const metadata = Array(3);
+            metadata[0] = 1234;
+            metadata[1] = 5678;
+            metadata[2] = 4321;
 
             await setAllowance(44);
 
             assert.equal(await this.contract.isArtist(user), false);
             assert.equal(await this.contract.totalArtists(), 0);
 
-            await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, { from: user });
+            await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, metadata, { from: user });
 
             assert.equal(await this.contract.isArtist(user), true);
             assert.equal(await this.contract.totalArtists(), 1);
 
-            await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, { from: user });
+            await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, metadata, { from: user });
 
             assert.equal(await this.contract.isArtist(user), true);
             assert.equal(await this.contract.totalArtists(), 1);
@@ -179,10 +201,14 @@ contract('MurAll', ([owner, user]) => {
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndexesValue;
             const firstTokenId = 0;
+            const metadata = Array(3);
+            metadata[0] = 1234;
+            metadata[1] = 5678;
+            metadata[2] = 4321;
 
             await setAllowance(22);
 
-            await this.contract.setPixels(individualPixels, pixelGroups, pixelGroupIndexes, { from: user });
+            await this.contract.setPixels(individualPixels, pixelGroups, pixelGroupIndexes, metadata, { from: user });
 
             assert.equal(await this.murAllNFT.totalSupply(), 1);
             assert.equal(await this.murAllNFT.ownerOf(firstTokenId), user);
@@ -200,6 +226,10 @@ contract('MurAll', ([owner, user]) => {
             pixelGroups[0] = pixelGroupsValue;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndexesValue;
+            const metadata = Array(3);
+            metadata[0] = 1234;
+            metadata[1] = 5678;
+            metadata[2] = 4321;
 
             const startSupply = await this.paintToken.totalSupply();
             const pixelCount = 22;
@@ -208,7 +238,7 @@ contract('MurAll', ([owner, user]) => {
 
             await setAllowance(pixelCount);
 
-            await this.contract.setPixels(individualPixels, pixelGroups, pixelGroupIndexes, { from: user });
+            await this.contract.setPixels(individualPixels, pixelGroups, pixelGroupIndexes, metadata, { from: user });
 
             assert.equal(await this.paintToken.totalSupply(), expectedSupply);
         });
