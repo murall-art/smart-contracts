@@ -1,0 +1,20 @@
+# OS generated files #
+.DS_Store
+.DS_Store?
+._*
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
+nbproject/
+.idea/
+.git/
+.vscode
+/.project
+*.log
+.env
+coverage.json
+
+build/
+coverage/
+node_modules/
