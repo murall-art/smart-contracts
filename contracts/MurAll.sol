@@ -43,14 +43,16 @@ contract MurAll is ReentrancyGuard {
     );
 
     /**
-     * individualPixels     - individual RGB pixels (2 bytes) twinned with their respective positions (3 bytes) - 6 pixels per uint256
-     * pixelGroups          - RGB pixels in groups of 16 (1 pixel every 2 bytes, RGB565 format)
-     * pixelGroupIndexes    - Group indexes matching the groups (1 index for every 3 bytes, 10 indexes per 32 byte entry)
+     * @param individualPixels     - individual RGB pixels (2 bytes) twinned with their respective positions (3 bytes) - 6 pixels per uint256
+     * @param pixelGroups          - RGB pixels in groups of 16 (1 pixel every 2 bytes, RGB565 format)
+     * @param pixelGroupIndexes    - Group indexes matching the groups (1 index for every 3 bytes, 10 indexes per 32 byte entry)
+     * @param metadata             - an array of 3 metadata items in order: name (string converted to uint256), number, seriesId
      */
     function setPixels(
         uint256[] memory individualPixels,
         uint256[] memory pixelGroups,
-        uint256[] memory pixelGroupIndexes
+        uint256[] memory pixelGroupIndexes,
+        uint256[3] memory metadata
     ) public nonReentrant {
         uint256 pixelCount = 0;
 
@@ -106,7 +108,7 @@ contract MurAll is ReentrancyGuard {
             decodeAndCheckGroupIndexes(pixelGroupIndexes[currentIndex]);
         }
 
-        uint256 tokenId = murAllNFT.mint(msg.sender, individualPixels, pixelGroups, pixelGroupIndexes);
+        uint256 tokenId = murAllNFT.mint(msg.sender, individualPixels, pixelGroups, pixelGroupIndexes, metadata);
 
         // add address to available list of artists
         if (!isArtist(msg.sender)) {
@@ -209,7 +211,7 @@ contract MurAll is ReentrancyGuard {
         return artists[userAddress];
     }
 
-    function getCostPerPixel() public view returns (uint256 costInWei) {
+    function getCostPerPixel() public pure returns (uint256 costInWei) {
         return PRICE_PER_PIXEL;
     }
 }

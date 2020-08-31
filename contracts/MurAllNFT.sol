@@ -13,10 +13,14 @@ contract MurAllNFT is ERC721, Ownable {
 
     struct ArtWork {
         bytes32 dataHash;
+        address artist;
         uint256[] individualPixels;
         uint256[] pixelGroups;
         uint256[] pixelGroupIndexes;
         uint256 completionData;
+        uint256 name;
+        uint256 number;
+        uint256 seriesId;
     }
 
     ArtWork[] artworks;
@@ -36,7 +40,8 @@ contract MurAllNFT is ERC721, Ownable {
         address origin,
         uint256[] memory individualPixels,
         uint256[] memory pixelGroups,
-        uint256[] memory pixelGroupIndexes
+        uint256[] memory pixelGroupIndexes,
+        uint256[3] memory metadata
     ) public onlyOwner returns (uint256) {
         // calculate data hashes
         bytes32 dataHash = keccak256(abi.encodePacked(individualPixels, pixelGroups, pixelGroupIndexes));
@@ -44,10 +49,14 @@ contract MurAllNFT is ERC721, Ownable {
         // create the artwork object
         ArtWork memory _artwork = ArtWork(
             dataHash,
+            origin,
             new uint256[](individualPixels.length),
             new uint256[](pixelGroups.length),
             new uint256[](pixelGroupIndexes.length),
-            0
+            0,
+            metadata[0],
+            metadata[1],
+            metadata[2]
         );
 
         // push the artwork to the array
@@ -164,5 +173,21 @@ contract MurAllNFT is ERC721, Ownable {
 
     function getArtworkDataHashForId(uint256 id) public view returns (bytes32) {
         return artworks[id].dataHash;
+    }
+
+    function getName(uint256 id) public view returns (uint256) {
+        return artworks[id].name;
+    }
+
+    function getNumber(uint256 id) public view returns (uint256) {
+        return artworks[id].number;
+    }
+
+    function getSeriesId(uint256 id) public view returns (uint256) {
+        return artworks[id].seriesId;
+    }
+
+    function getArtist(uint256 id) public view returns (address) {
+        return artworks[id].artist;
     }
 }

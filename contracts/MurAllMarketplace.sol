@@ -381,4 +381,6 @@ contract MurAllMarketplace is Ownable, ERC721Holder, ReentrancyGuard {
     }
 
     fallback() external payable {}
+
+    receive() external payable {}
 }
