@@ -22,12 +22,12 @@ contract ArtwrkMetadata is Ownable {
 
         // Name
         string memory name = bytes32ToString(bytes32(murAllNFT.getName(_tokenId)));
-        metadata = strConcat("{\n  \"name\": \"", name);
-        metadata = strConcat(metadata, "\",\n");
+        metadata = strConcat('{\n  "name": "', name);
+        metadata = strConcat(metadata, '",\n');
 
         // Description: Artist
         string memory artist = toAsciiString(murAllNFT.getArtist(_tokenId));
-        metadata = strConcat(metadata, "  \"description\": \"By Artist ");
+        metadata = strConcat(metadata, '  "description": "By Artist ');
         metadata = strConcat(metadata, artist);
 
         // Description: Number
@@ -38,7 +38,14 @@ contract ArtwrkMetadata is Ownable {
         metadata = strConcat(metadata, " from Series ");
         metadata = strConcat(metadata, uintToStr(murAllNFT.getSeriesId(_tokenId)));
 
-        metadata = strConcat(metadata, "\",\n");
+        if (murAllNFT.hasAlphaChannel(_tokenId)) {
+            // Description: Alpha Channel
+            metadata = strConcat(metadata, ", with alpha (RGB565 channel ");
+            metadata = strConcat(metadata, uintToStr(murAllNFT.getAlphaChannel(_tokenId)));
+            metadata = strConcat(metadata, ")");
+        }
+
+        metadata = strConcat(metadata, '",\n');
 
         // View URI
         // metadata = strConcat(metadata, '  "external_url": "');
@@ -51,35 +58,45 @@ contract ArtwrkMetadata is Ownable {
         // metadata = strConcat(metadata, '",\n');
 
         // Attributes (ala OpenSea)
-        metadata = strConcat(metadata, "  \"attributes\": [\n");
+        metadata = strConcat(metadata, '  "attributes": [\n');
 
         // Name
         metadata = strConcat(metadata, "    {\n");
-        metadata = strConcat(metadata, "      \"trait_type\": \"name\",\n");
-        metadata = strConcat(metadata, "      \"value\": \"");
+        metadata = strConcat(metadata, '      "trait_type": "name",\n');
+        metadata = strConcat(metadata, '      "value": "');
         metadata = strConcat(metadata, name);
-        metadata = strConcat(metadata, "\"\n    },\n");
+        metadata = strConcat(metadata, '"\n    },\n');
 
         // Artist
         metadata = strConcat(metadata, "    {\n");
-        metadata = strConcat(metadata, "      \"trait_type\": \"artist\",\n");
-        metadata = strConcat(metadata, "      \"value\": \"");
+        metadata = strConcat(metadata, '      "trait_type": "artist",\n');
+        metadata = strConcat(metadata, '      "value": "');
         metadata = strConcat(metadata, artist);
-        metadata = strConcat(metadata, "\"\n    },\n");
+        metadata = strConcat(metadata, '"\n    },\n');
+
+        if (murAllNFT.hasAlphaChannel(_tokenId)) {
+            // Alpha Channel
+            metadata = strConcat(metadata, "    {\n");
+            metadata = strConcat(metadata, '      "display_type": "number",\n');
+            metadata = strConcat(metadata, '      "trait_type": "Alpha channel (RGB565)",\n');
+            metadata = strConcat(metadata, '      "value": ');
+            metadata = strConcat(metadata, uintToStr(murAllNFT.getAlphaChannel(_tokenId)));
+            metadata = strConcat(metadata, "\n    },\n");
+        }
 
         // Number
         metadata = strConcat(metadata, "    {\n");
-        metadata = strConcat(metadata, "      \"display_type\": \"number\",\n");
-        metadata = strConcat(metadata, "      \"trait_type\": \"number\",\n");
-        metadata = strConcat(metadata, "      \"value\": ");
+        metadata = strConcat(metadata, '      "display_type": "number",\n');
+        metadata = strConcat(metadata, '      "trait_type": "number",\n');
+        metadata = strConcat(metadata, '      "value": ');
         metadata = strConcat(metadata, uintToStr(murAllNFT.getNumber(_tokenId)));
         metadata = strConcat(metadata, "\n    },\n");
 
         // Series Id
         metadata = strConcat(metadata, "    {\n");
-        metadata = strConcat(metadata, "      \"display_type\": \"number\",\n");
-        metadata = strConcat(metadata, "      \"trait_type\": \"Series Id\",\n");
-        metadata = strConcat(metadata, "      \"value\": ");
+        metadata = strConcat(metadata, '      "display_type": "number",\n');
+        metadata = strConcat(metadata, '      "trait_type": "Series Id",\n');
+        metadata = strConcat(metadata, '      "value": ');
         metadata = strConcat(metadata, uintToStr(murAllNFT.getSeriesId(_tokenId)));
         metadata = strConcat(metadata, "\n    }\n");
 

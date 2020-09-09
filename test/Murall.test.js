@@ -59,10 +59,9 @@ contract('MurAll', ([owner, user]) => {
             individualPixels[0] = pixelOutOfRange;
             const pixelGroups = Array(0);
             const pixelGroupIndexes = Array(0);
-            const metadata = Array(3);
+            const metadata = Array(2);
             metadata[0] = 1234;
             metadata[1] = 5678;
-            metadata[2] = 4321;
 
             await setAllowance(6);
 
@@ -82,10 +81,9 @@ contract('MurAll', ([owner, user]) => {
             pixelGroups[0] = pixel;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupOutOfRange;
-            const metadata = Array(3);
+            const metadata = Array(2);
             metadata[0] = 1234;
             metadata[1] = 5678;
-            metadata[2] = 4321;
 
             await setAllowance(16);
 
@@ -95,12 +93,13 @@ contract('MurAll', ([owner, user]) => {
             );
         });
 
-        /* TODO this test fails even though the expected parameters are correct, needs investigation*/
         it('emits painted event with correct data', async () => {
             // given
-            const pixel = '0x0000cc83000007cc83000001cc83000002cc83000003cc83000004cc83000005';
-            const pixelGroup = '0x26a4d3a4217ad135efa1f04d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab';
-            const pixelGroupIndex = '0x000000000a00001400001e00002800003200003c00004600005000005a000064';
+            const pixel = web3.utils.toBN('0x0000cc83000007cc83000001cc83000002cc83000003cc83000004cc83000005');
+            const pixelGroup = web3.utils.toBN('0x26a4d3a4217ad135efa1f04d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab');
+            const pixelGroupIndex = web3.utils.toBN(
+                '0x000000000a00001400001e00002800003200003c00004600005000005a000064'
+            );
 
             const pixelData = Array(1);
             pixelData[0] = pixel;
@@ -108,23 +107,23 @@ contract('MurAll', ([owner, user]) => {
             pixelGroups[0] = pixelGroup;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndex;
-            const metadata = Array(3);
-            metadata[0] = 1234;
-            metadata[1] = 5678;
-            metadata[2] = 4321;
+            const metadata = Array(2);
+            metadata[0] = web3.utils.toBN(1234);
+            metadata[1] = web3.utils.toBN(5678);
 
             await setAllowance(22);
 
             const receipt = await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, metadata, {
                 from: user,
             });
-            // TODO the array data seems to be failing the assert even though the data is equal, needs investigation
+            // TODO Openzeppelin test helpers currently can't assert arrays of BigNumber https://github.com/OpenZeppelin/openzeppelin-test-helpers/issues/1
             await expectEvent(receipt, 'Painted', {
-                sender: user,
+                artist: user,
                 tokenId: '0',
-                /*pixelData: pixelData,
-                pixelGroups: pixelGroups,
-                pixelGroupIndexes: pixelGroupIndexes,*/
+                // pixelData: pixelData,
+                // pixelGroups: pixelGroups,
+                // pixelGroupIndexes: pixelGroupIndexes,
+                // metadata: metadata,
             });
         });
 
@@ -140,19 +139,18 @@ contract('MurAll', ([owner, user]) => {
             pixelGroups[0] = pixelGroup;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndex;
-            const metadata = Array(3);
+            const metadata = Array(2);
             metadata[0] = 1234;
             metadata[1] = 5678;
-            metadata[2] = 4321;
 
             await setAllowance(22);
 
-            assert.equal(await this.contract.isArtist(user), false);
+            assert.isFalse(await this.contract.isArtist(user));
             assert.equal(await this.contract.totalArtists(), 0);
 
             await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, metadata, { from: user });
 
-            assert.equal(await this.contract.isArtist(user), true);
+            assert.isTrue(await this.contract.isArtist(user));
             assert.equal(await this.contract.totalArtists(), 1);
         });
 
@@ -168,24 +166,23 @@ contract('MurAll', ([owner, user]) => {
             pixelGroups[0] = pixelGroup;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndex;
-            const metadata = Array(3);
+            const metadata = Array(2);
             metadata[0] = 1234;
             metadata[1] = 5678;
-            metadata[2] = 4321;
 
             await setAllowance(44);
 
-            assert.equal(await this.contract.isArtist(user), false);
+            assert.isFalse(await this.contract.isArtist(user));
             assert.equal(await this.contract.totalArtists(), 0);
 
             await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, metadata, { from: user });
 
-            assert.equal(await this.contract.isArtist(user), true);
+            assert.isTrue(await this.contract.isArtist(user));
             assert.equal(await this.contract.totalArtists(), 1);
 
             await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, metadata, { from: user });
 
-            assert.equal(await this.contract.isArtist(user), true);
+            assert.isTrue(await this.contract.isArtist(user));
             assert.equal(await this.contract.totalArtists(), 1);
         });
 
@@ -201,10 +198,9 @@ contract('MurAll', ([owner, user]) => {
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndexesValue;
             const firstTokenId = 0;
-            const metadata = Array(3);
+            const metadata = Array(2);
             metadata[0] = 1234;
             metadata[1] = 5678;
-            metadata[2] = 4321;
 
             await setAllowance(22);
 
@@ -226,10 +222,9 @@ contract('MurAll', ([owner, user]) => {
             pixelGroups[0] = pixelGroupsValue;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndexesValue;
-            const metadata = Array(3);
+            const metadata = Array(2);
             metadata[0] = 1234;
             metadata[1] = 5678;
-            metadata[2] = 4321;
 
             const startSupply = await this.paintToken.totalSupply();
             const pixelCount = 22;

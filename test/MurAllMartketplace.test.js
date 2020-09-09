@@ -24,10 +24,9 @@ contract('MurAllMarketplace', ([owner, user]) => {
         pixelGroups[0] = pixelGroupsValue;
         const pixelGroupIndexes = Array(1);
         pixelGroupIndexes[0] = pixelGroupIndexesValue;
-        const metadata = Array(3);
+        const metadata = Array(2);
         metadata[0] = 1234;
         metadata[1] = 5678;
-        metadata[2] = 4321;
 
         await this.murAllNFT.mint(fromAddress, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
             from: owner,
