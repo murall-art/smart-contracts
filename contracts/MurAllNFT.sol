@@ -7,8 +7,12 @@ contract MurAllNFT is ERC721, Ownable {
     uint256 constant FILL_DATA_GAS_RESERVE = 26000;
     // 0xffffff0000000000000000000000000000000000000000000000000000000000
     uint256 constant FIRST_3_BYTES_MASK = 115792082335569848633007197573932045576244532214531591869071028845388905840640;
-    // 0x000000000000000000000000000000000000000000000000000000000000000f
+    // 0x000000000000000000000000000000000000000000000000000000000000000F
     uint256 constant ARTWORK_COMPLETE_BYTES_MASK = 15;
+    // 0x000000000000000000000000000000000000000000000000000000000000000F
+    uint256 constant METADATA_HAS_ALPHA_CHANNEL_BYTES_MASK = 15;
+    // 0x000000000000000000000000000000000000000000000000000000000000FFFF
+    uint256 constant METADATA_ALPHA_CHANNEL_BYTES_MASK = 65535;
     uint256 constant CONVERSION_SHIFT_BYTES = 232;
 
     struct ArtWork {
@@ -19,8 +23,7 @@ contract MurAllNFT is ERC721, Ownable {
         uint256[] pixelGroupIndexes;
         uint256 completionData;
         uint256 name;
-        uint256 number;
-        uint256 seriesId;
+        uint256 metadata;
     }
 
     ArtWork[] artworks;
@@ -41,7 +44,7 @@ contract MurAllNFT is ERC721, Ownable {
         uint256[] memory individualPixels,
         uint256[] memory pixelGroups,
         uint256[] memory pixelGroupIndexes,
-        uint256[3] memory metadata
+        uint256[2] memory metadata
     ) public onlyOwner returns (uint256) {
         // calculate data hashes
         bytes32 dataHash = keccak256(abi.encodePacked(individualPixels, pixelGroups, pixelGroupIndexes));
@@ -55,8 +58,7 @@ contract MurAllNFT is ERC721, Ownable {
             new uint256[](pixelGroupIndexes.length),
             0,
             metadata[0],
-            metadata[1],
-            metadata[2]
+            metadata[1]
         );
 
         // push the artwork to the array
@@ -156,6 +158,31 @@ contract MurAllNFT is ERC721, Ownable {
         );
     }
 
+    function getFullDataForId(uint256 id)
+        public
+        view
+        returns (
+            uint256[] memory individualPixels,
+            uint256[] memory pixelGroups,
+            uint256[] memory pixelGroupIndexes,
+            address artist,
+            uint256 name,
+            uint256 metadata
+        )
+    {
+        ArtWork memory _artwork = artworks[id];
+        require((ARTWORK_COMPLETE_BYTES_MASK & _artwork.completionData) != 0, "Artwork is unfinished");
+
+        return (
+            _artwork.individualPixels,
+            _artwork.pixelGroups,
+            _artwork.pixelGroupIndexes,
+            _artwork.artist,
+            _artwork.name,
+            _artwork.metadata
+        );
+    }
+
     function getArtworkForId(uint256 id)
         public
         view
@@ -180,11 +207,20 @@ contract MurAllNFT is ERC721, Ownable {
     }
 
     function getNumber(uint256 id) public view returns (uint256) {
-        return artworks[id].number;
+        return (FIRST_3_BYTES_MASK & artworks[id].metadata) >> CONVERSION_SHIFT_BYTES;
     }
 
     function getSeriesId(uint256 id) public view returns (uint256) {
-        return artworks[id].seriesId;
+        return (FIRST_3_BYTES_MASK & (artworks[id].metadata << 24)) >> CONVERSION_SHIFT_BYTES;
+    }
+
+    function hasAlphaChannel(uint256 id) public view returns (bool) {
+        return (METADATA_HAS_ALPHA_CHANNEL_BYTES_MASK & artworks[id].metadata) != 0;
+    }
+
+    function getAlphaChannel(uint256 id) public view returns (uint256) {
+        require(hasAlphaChannel(id), "Artwork has no alpha");
+        return METADATA_ALPHA_CHANNEL_BYTES_MASK & (artworks[id].metadata >> 4);
     }
 
     function getArtist(uint256 id) public view returns (address) {

@@ -35,24 +35,25 @@ contract MurAll is ReentrancyGuard {
 
     //Declare an Event for when canvas is written to
     event Painted(
-        address indexed sender,
+        address indexed artist,
         uint256 indexed tokenId,
         uint256[] pixelData,
         uint256[] pixelGroups,
-        uint256[] pixelGroupIndexes
+        uint256[] pixelGroupIndexes,
+        uint256[2] metadata
     );
 
     /**
      * @param individualPixels     - individual RGB pixels (2 bytes) twinned with their respective positions (3 bytes) - 6 pixels per uint256
      * @param pixelGroups          - RGB pixels in groups of 16 (1 pixel every 2 bytes, RGB565 format)
      * @param pixelGroupIndexes    - Group indexes matching the groups (1 index for every 3 bytes, 10 indexes per 32 byte entry)
-     * @param metadata             - an array of 3 metadata items in order: name (string converted to uint256), number, seriesId
+     * @param metadata             - an array of 2 metadata items in order: name (32 byte string converted to uint256), other metadata (formatted byte array consiting of number, seriesId, alpha channel and alpha channel flag)
      */
     function setPixels(
         uint256[] memory individualPixels,
         uint256[] memory pixelGroups,
         uint256[] memory pixelGroupIndexes,
-        uint256[3] memory metadata
+        uint256[2] memory metadata
     ) public nonReentrant {
         uint256 pixelCount = 0;
 
@@ -116,7 +117,7 @@ contract MurAll is ReentrancyGuard {
             totalArtists++;
         }
 
-        emit Painted(msg.sender, tokenId, individualPixels, pixelGroups, pixelGroupIndexes);
+        emit Painted(msg.sender, tokenId, individualPixels, pixelGroups, pixelGroupIndexes, metadata);
     }
 
     function decodeAndCheckIndividualPixelIndexes(uint256 x)
