@@ -6,7 +6,7 @@ const MurAll = artifacts.require('./MurAll.sol');
 const MurAllNFT = artifacts.require('./MurAllNFT.sol');
 const PaintToken = artifacts.require('./PaintToken.sol');
 
-const PRICE_PER_PIXEL = 500000000000000;
+const PRICE_PER_PIXEL = 500000000000000000;
 
 contract('MurAll', ([owner, user]) => {
     const setAllowance = async (pixelCount) => {
@@ -236,6 +236,14 @@ contract('MurAll', ([owner, user]) => {
             await this.contract.setPixels(individualPixels, pixelGroups, pixelGroupIndexes, metadata, { from: user });
 
             assert.equal(await this.paintToken.totalSupply(), expectedSupply);
+        });
+    });
+
+    describe('PAINT cost', async () => {
+        it('getCostPerPixel returns correct PAINT cost', async () => {
+            const costPerPixel = await this.contract.getCostPerPixel();
+
+            assert.isTrue(costPerPixel.eq(web3.utils.toBN(PRICE_PER_PIXEL)));
         });
     });
 });
