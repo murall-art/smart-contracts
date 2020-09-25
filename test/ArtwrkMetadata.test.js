@@ -24,6 +24,10 @@ contract('ArtwrkMetadata', ([owner, user]) => {
         });
     };
 
+    const getAddressString = (address) => {
+        return address.toString().toLowerCase().slice(2);
+    };
+
     beforeEach(async () => {
         this.murAllNFT = await MurAllNFT.new({ from: owner });
 
@@ -56,7 +60,11 @@ contract('ArtwrkMetadata', ([owner, user]) => {
             metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000010E11';
 
             const expectedMetadata =
-                '{\n  "name": "hello world!",\n  "description": "By Artist 108e053c1ddfdafffc019dd6042f602ba00513c4, Number 1234 from Series 5678, with alpha (RGB565 channel 4321)",\n  "attributes": [\n    {\n      "trait_type": "name",\n      "value": "hello world!"\n    },\n    {\n      "trait_type": "artist",\n      "value": "108e053c1ddfdafffc019dd6042f602ba00513c4"\n    },\n    {\n      "display_type": "number",\n      "trait_type": "Alpha channel (RGB565)",\n      "value": 4321\n    },\n    {\n      "display_type": "number",\n      "trait_type": "number",\n      "value": 1234\n    },\n    {\n      "display_type": "number",\n      "trait_type": "Series Id",\n      "value": 5678\n    }\n  ]\n}';
+                '{\n  "name": "hello world!",\n  "description": "By Artist ' +
+                getAddressString(user) +
+                ', Number 1234 from Series 5678, with alpha (RGB565 channel 4321)",\n  "attributes": [\n    {\n      "trait_type": "name",\n      "value": "hello world!"\n    },\n    {\n      "trait_type": "artist",\n      "value": "' +
+                getAddressString(user) +
+                '"\n    },\n    {\n      "display_type": "number",\n      "trait_type": "Alpha channel (RGB565)",\n      "value": 4321\n    },\n    {\n      "display_type": "number",\n      "trait_type": "number",\n      "value": 1234\n    },\n    {\n      "display_type": "number",\n      "trait_type": "Series Id",\n      "value": 5678\n    }\n  ]\n}';
             const tokenId = 0;
 
             await mintTestToken(user, metadata);
@@ -74,7 +82,11 @@ contract('ArtwrkMetadata', ([owner, user]) => {
             metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000000';
 
             const expectedMetadata =
-                '{\n  "name": "hello world!",\n  "description": "By Artist 108e053c1ddfdafffc019dd6042f602ba00513c4, Number 1234 from Series 5678",\n  "attributes": [\n    {\n      "trait_type": "name",\n      "value": "hello world!"\n    },\n    {\n      "trait_type": "artist",\n      "value": "108e053c1ddfdafffc019dd6042f602ba00513c4"\n    },\n    {\n      "display_type": "number",\n      "trait_type": "number",\n      "value": 1234\n    },\n    {\n      "display_type": "number",\n      "trait_type": "Series Id",\n      "value": 5678\n    }\n  ]\n}';
+                '{\n  "name": "hello world!",\n  "description": "By Artist ' +
+                getAddressString(user) +
+                ', Number 1234 from Series 5678",\n  "attributes": [\n    {\n      "trait_type": "name",\n      "value": "hello world!"\n    },\n    {\n      "trait_type": "artist",\n      "value": "' +
+                getAddressString(user) +
+                '"\n    },\n    {\n      "display_type": "number",\n      "trait_type": "number",\n      "value": 1234\n    },\n    {\n      "display_type": "number",\n      "trait_type": "Series Id",\n      "value": 5678\n    }\n  ]\n}';
             const tokenId = 0;
 
             await mintTestToken(user, metadata);
