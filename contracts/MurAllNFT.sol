@@ -18,6 +18,7 @@ contract MurAllNFT is ERC721, Ownable {
     struct ArtWork {
         bytes32 dataHash;
         address artist;
+        uint256[] colorIndex;
         uint256[] individualPixels;
         uint256[] pixelGroups;
         uint256[] pixelGroupIndexes;
@@ -41,6 +42,7 @@ contract MurAllNFT is ERC721, Ownable {
 
     function mint(
         address origin,
+        uint256[] memory colorIndex,
         uint256[] memory individualPixels,
         uint256[] memory pixelGroups,
         uint256[] memory pixelGroupIndexes,
@@ -53,6 +55,7 @@ contract MurAllNFT is ERC721, Ownable {
         ArtWork memory _artwork = ArtWork(
             dataHash,
             origin,
+            colorIndex,
             new uint256[](individualPixels.length),
             new uint256[](pixelGroups.length),
             new uint256[](pixelGroupIndexes.length),
@@ -162,6 +165,7 @@ contract MurAllNFT is ERC721, Ownable {
         public
         view
         returns (
+            uint256[] memory colorIndex,
             uint256[] memory individualPixels,
             uint256[] memory pixelGroups,
             uint256[] memory pixelGroupIndexes,
@@ -174,6 +178,7 @@ contract MurAllNFT is ERC721, Ownable {
         require((ARTWORK_COMPLETE_BYTES_MASK & _artwork.completionData) != 0, "Artwork is unfinished");
 
         return (
+            _artwork.colorIndex,
             _artwork.individualPixels,
             _artwork.pixelGroups,
             _artwork.pixelGroupIndexes,
@@ -187,6 +192,7 @@ contract MurAllNFT is ERC721, Ownable {
         public
         view
         returns (
+            uint256[] memory colorIndex,
             uint256[] memory individualPixels,
             uint256[] memory pixelGroups,
             uint256[] memory pixelGroupIndexes
@@ -195,7 +201,7 @@ contract MurAllNFT is ERC721, Ownable {
         ArtWork memory _artwork = artworks[id];
         require((ARTWORK_COMPLETE_BYTES_MASK & _artwork.completionData) != 0, "Artwork is unfinished");
 
-        return (_artwork.individualPixels, _artwork.pixelGroups, _artwork.pixelGroupIndexes);
+        return (_artwork.colorIndex, _artwork.individualPixels, _artwork.pixelGroups, _artwork.pixelGroupIndexes);
     }
 
     function getArtworkDataHashForId(uint256 id) public view returns (bytes32) {
