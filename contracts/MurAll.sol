@@ -35,7 +35,7 @@ contract MurAll is ReentrancyGuard {
     );
 
     /**
-     * @param colorIndex           - color index defining the 256 colors the pixels reference at display time (RGB565 format, 4 bytes per color)
+     * @param colorIndex           - color index defining the 256 colors the pixels reference at display time (RGB565 format, 2 bytes per color)
      * @param individualPixels     - individual pixel references to the color index (1 bytes) twinned with their respective positions (3 bytes) - 8 pixels per uint256
      * @param pixelGroups          - RGB pixels in groups of 32 (1 pixel reference every 1 byte)
      * @param pixelGroupIndexes    - Group indexes matching the groups (1 index for every 2 bytes, 16 indexes per 32 byte entry)
@@ -108,21 +108,46 @@ contract MurAll is ReentrancyGuard {
                 valid := 1
             }
 
-            let len := 0x07
-            let offset := 0x1C
+            mstore(0x1C, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
 
-            for {
-                let i := 0
-            } lt(i, len) {
-                i := add(i, 1)
-            } {
-                mstore(offset, toCheck)
-                converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            mstore(0x18, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
 
-                if gt(converted, MAX_PIXEL_RES) {
-                    valid := 1
-                }
-                offset := sub(offset, 0x04)
+            mstore(0x14, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
+
+            mstore(0x10, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
+
+            mstore(0x0C, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
+
+            mstore(0x08, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
+
+            mstore(0x04, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
             }
         }
     }
@@ -162,21 +187,95 @@ contract MurAll is ReentrancyGuard {
             if gt(converted, NUM_OF_GROUPS) {
                 valid := 1
             }
-            let len := 0x0F //15 (we already have the first decoded)
-            let offset := 0x1E
 
-            for {
-                let i := 0
-            } lt(i, len) {
-                i := add(i, 1)
-            } {
-                mstore(offset, toCheck)
-                converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            mstore(0x1E, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
 
-                if gt(converted, NUM_OF_GROUPS) {
-                    valid := 1
-                }
-                offset := sub(offset, 0x02)
+            mstore(0x1C, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x1A, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x18, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x16, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x14, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x12, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x10, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x0E, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x0C, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x0A, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x08, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x06, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x04, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x02, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
             }
         }
     }
