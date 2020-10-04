@@ -5,21 +5,11 @@ import {MurAllNFT} from "./MurAllNFT.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract MurAll is ReentrancyGuard {
-    uint256 constant NUM_OF_GROUPS = 129600; // 2073600 pixels / 16 pixels per group
+    uint256 constant NUM_OF_GROUPS = 64800; // 2073600 pixels / 32 pixels per group
     uint256 constant MAX_PIXEL_RES = 2073600;
-    uint256 constant NUMBER_PER_GROUP = 16;
-    uint256 constant NUMBER_PER_INDEX_GROUP = 10;
-    uint256 constant THREE_BYTES = 24;
-    uint256 constant TWO_BYTES = 16;
-    uint256 constant INDIVIDUAL_PIXEL_POSITION_SHIFT_BYTES = 40;
-    uint256 constant COORD_CONVERSION_SHIFT_BYTES = 216;
-    uint256 constant PIXEL_GROUP_CONVERSION_SHIFT_BYTES = 232;
-    // 0xffffff0000000000000000000000000000000000000000000000000000000000
-    uint256 constant FIRST_3_BYTES_MASK = 115792082335569848633007197573932045576244532214531591869071028845388905840640;
-    // 0xffff000000000000000000000000000000000000000000000000000000000000;
-    uint256 constant FIRST_2_BYTES_MASK = 115790322390251417039241401711187164934754157181743688420499462401711837020160;
-    // 0x0000ffffff000000000000000000000000000000000000000000000000000000
-    uint256 constant COORD_BYTES_MASK = 1766846959466092661026110802824890832157051577980523557572494946981642240;
+    uint256 constant NUMBER_PER_GROUP = 32;
+    uint256 constant NUMBER_PER_INDEX_GROUP = 16;
+
     uint256 constant PRICE_PER_PIXEL = 500000000000000000;
 
     PaintToken public paintToken;
@@ -37,6 +27,7 @@ contract MurAll is ReentrancyGuard {
     event Painted(
         address indexed artist,
         uint256 indexed tokenId,
+        uint256[] colorIndex,
         uint256[] pixelData,
         uint256[] pixelGroups,
         uint256[] pixelGroupIndexes,
@@ -44,12 +35,14 @@ contract MurAll is ReentrancyGuard {
     );
 
     /**
-     * @param individualPixels     - individual RGB pixels (2 bytes) twinned with their respective positions (3 bytes) - 6 pixels per uint256
-     * @param pixelGroups          - RGB pixels in groups of 16 (1 pixel every 2 bytes, RGB565 format)
-     * @param pixelGroupIndexes    - Group indexes matching the groups (1 index for every 3 bytes, 10 indexes per 32 byte entry)
+     * @param colorIndex           - color index defining the 256 colors the pixels reference at display time (RGB565 format, 2 bytes per color)
+     * @param individualPixels     - individual pixel references to the color index (1 bytes) twinned with their respective positions (3 bytes) - 8 pixels per uint256
+     * @param pixelGroups          - RGB pixels in groups of 32 (1 pixel reference every 1 byte)
+     * @param pixelGroupIndexes    - Group indexes matching the groups (1 index for every 2 bytes, 16 indexes per 32 byte entry)
      * @param metadata             - an array of 2 metadata items in order: name (32 byte string converted to uint256), other metadata (formatted byte array consiting of number, seriesId, alpha channel and alpha channel flag)
      */
     function setPixels(
+        uint256[] memory colorIndex,
         uint256[] memory individualPixels,
         uint256[] memory pixelGroups,
         uint256[] memory pixelGroupIndexes,
@@ -58,58 +51,46 @@ contract MurAll is ReentrancyGuard {
         uint256 pixelCount = 0;
 
         uint256 len = individualPixels.length;
-        require(len <= 345600, "individualPixels too large"); //Each slot in the data fits 6 px and 6 indexes (2073600 / 6)
-
-        uint24 a;
-        uint24 b;
-        uint24 c;
-        uint24 d;
-        uint24 e;
-        uint24 f;
+        require(colorIndex.length <= 16, "colour index too large"); // max 256 colors in groups of 16 (16 groups of 16 colors = 256 colors)
+        require(len <= 259200, "individualPixels too large"); //Each slot in the data fits 8 px and 8 indexes (2073600 / 8)
 
         if (len > 0) {
             // Do first set of pixels separately to initialise currentGroup
             for (uint256 currentIndex = 0; currentIndex < len - 1; currentIndex++) {
-                decodeAndCheckIndividualPixelIndexes(individualPixels[currentIndex]);
+                require(checkIndividualPixelIndexes(individualPixels[currentIndex]) == 0, "coord is out of range"); // coordinate is in 1920 x 1080 px resolution range
             }
             //assuming all individual pixel groups except the last have all 6 pixels filled
             pixelCount += (6 * (len - 1)); // 6 individual pixels per uint256
 
             //decode the last group and check the pixels individually to ensure pixel count is correct
-            (a, b, c, d, e, f) = decodeAndCheckIndividualPixelIndexes(individualPixels[len - 1]);
+            uint24[8] memory convertedPixels = decodeAndCheckIndividualPixelIndexes(individualPixels[len - 1]);
 
-            if (a != 0) {
-                pixelCount++;
-            }
-            if (b != 0) {
-                pixelCount++;
-            }
-            if (c != 0) {
-                pixelCount++;
-            }
-            if (d != 0) {
-                pixelCount++;
-            }
-            if (e != 0) {
-                pixelCount++;
-            }
-            if (f != 0) {
-                pixelCount++;
+            for (uint256 i = 0; i < convertedPixels.length; i++) {
+                if (convertedPixels[i] != 0) {
+                    pixelCount++;
+                }
             }
         }
 
         len = pixelGroups.length;
 
-        pixelCount += (len * NUMBER_PER_GROUP); // 16 pixels per group
+        pixelCount += (len * NUMBER_PER_GROUP); // 32 pixels per group
         paintToken.burnFrom(msg.sender, PRICE_PER_PIXEL * pixelCount);
 
-        require(len <= NUM_OF_GROUPS, "pixel groups too large"); //Each slot in the data fits 16 px (2073600 / 16)
+        require(len <= NUM_OF_GROUPS, "pixel groups too large"); //Each slot in the data fits 32 px (2073600 / 32)
         len = pixelGroupIndexes.length;
         for (uint256 currentIndex = 0; currentIndex < len; currentIndex++) {
-            decodeAndCheckGroupIndexes(pixelGroupIndexes[currentIndex]);
+            require(checkGroupIndexes(pixelGroupIndexes[currentIndex]) == 0, "group is out of range"); // group is out of the 207360 range
         }
 
-        uint256 tokenId = murAllNFT.mint(msg.sender, individualPixels, pixelGroups, pixelGroupIndexes, metadata);
+        uint256 tokenId = murAllNFT.mint(
+            msg.sender,
+            colorIndex,
+            individualPixels,
+            pixelGroups,
+            pixelGroupIndexes,
+            metadata
+        );
 
         // add address to available list of artists
         if (!isArtist(msg.sender)) {
@@ -117,95 +98,186 @@ contract MurAll is ReentrancyGuard {
             totalArtists++;
         }
 
-        emit Painted(msg.sender, tokenId, individualPixels, pixelGroups, pixelGroupIndexes, metadata);
+        emit Painted(msg.sender, tokenId, colorIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata);
     }
 
-    function decodeAndCheckIndividualPixelIndexes(uint256 x)
-        internal
-        pure
-        returns (
-            uint24 a,
-            uint24 b,
-            uint24 c,
-            uint24 d,
-            uint24 e,
-            uint24 f
-        )
-    {
+    function checkIndividualPixelIndexes(uint256 toCheck) internal pure returns (uint256 valid) {
         assembly {
-            f := x
-            mstore(0x19, x)
-            a := mload(0)
-            mstore(0x14, x)
-            b := mload(0)
-            mstore(0x0F, x)
-            c := mload(0)
-            mstore(0x0A, x)
-            d := mload(0)
-            mstore(0x05, x)
-            e := mload(0)
+            let converted := and(toCheck, 0x0000000000000000000000000000000000000000000000000000000000FFFFFF) // first is actually last 2 bytes in the byte array (uint256 converted to uint16)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
+
+            mstore(0x1C, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
+
+            mstore(0x18, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
+
+            mstore(0x14, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
+
+            mstore(0x10, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
+
+            mstore(0x0C, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
+
+            mstore(0x08, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
+
+            mstore(0x04, toCheck)
+            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
+            if gt(converted, MAX_PIXEL_RES) {
+                valid := 1
+            }
+        }
+    }
+
+    function decodeAndCheckIndividualPixelIndexes(uint256 toCheck) public pure returns (uint24[8] memory converted) {
+        assembly {
+            mstore(converted, toCheck) // first is actually last 3 bytes in the byte array (uint256 converted to uint24)
+            let len := 0x07
+            let offset := 0x1C
+
+            for {
+                let i := 0
+            } lt(i, len) {
+                i := add(i, 1)
+            } {
+                mstore(offset, toCheck)
+                mstore(add(converted, add(0x20, mul(i, 0x20))), mload(0)) // add data to the array, data offset = 0x20 (1st 32 is reserved for size) & i*32 to pickup the right index mstore(add(converted, add(0x20, mul(1, 0x20))), toCheck) // add data to the array, data offset = 0x20 (1st 32 is reserved for size) & i*32 to pickup the right index
+                offset := sub(offset, 0x04)
+            }
         }
         require(
-            a < MAX_PIXEL_RES &&
-                b < MAX_PIXEL_RES &&
-                c < MAX_PIXEL_RES &&
-                d < MAX_PIXEL_RES &&
-                e < MAX_PIXEL_RES &&
-                f < MAX_PIXEL_RES,
+            converted[0] < MAX_PIXEL_RES &&
+                converted[1] < MAX_PIXEL_RES &&
+                converted[2] < MAX_PIXEL_RES &&
+                converted[3] < MAX_PIXEL_RES &&
+                converted[4] < MAX_PIXEL_RES &&
+                converted[5] < MAX_PIXEL_RES &&
+                converted[6] < MAX_PIXEL_RES &&
+                converted[7] < MAX_PIXEL_RES,
             "coord is out of range"
         ); // coordinate is in 1920 x 1080 px resolution range
     }
 
-    function decodeAndCheckGroupIndexes(uint256 x)
-        public
-        pure
-        returns (
-            uint24 a,
-            uint24 b,
-            uint24 c,
-            uint24 d,
-            uint24 e,
-            uint24 f,
-            uint24 g,
-            uint24 h,
-            uint24 i,
-            uint24 j
-        )
-    {
+    function checkGroupIndexes(uint256 toCheck) public pure returns (uint256 valid) {
         assembly {
-            j := x
-            mstore(0x1B, x)
-            a := mload(0)
-            mstore(0x18, x)
-            b := mload(0)
-            mstore(0x15, x)
-            c := mload(0)
-            mstore(0x12, x)
-            d := mload(0)
-            mstore(0x0F, x)
-            e := mload(0)
-            mstore(0x0C, x)
-            f := mload(0)
-            mstore(0x09, x)
-            g := mload(0)
-            mstore(0x06, x)
-            h := mload(0)
-            mstore(0x03, x)
-            i := mload(0)
+            let converted := and(toCheck, 0x000000000000000000000000000000000000000000000000000000000000FFFF) // first is actually last 2 bytes in the byte array (uint256 converted to uint16)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x1E, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x1C, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x1A, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x18, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x16, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x14, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x12, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x10, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x0E, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x0C, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x0A, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x08, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x06, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x04, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
+
+            mstore(0x02, toCheck)
+            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
+            if gt(converted, NUM_OF_GROUPS) {
+                valid := 1
+            }
         }
-        require(
-            a < NUM_OF_GROUPS &&
-                b < NUM_OF_GROUPS &&
-                c < NUM_OF_GROUPS &&
-                d < NUM_OF_GROUPS &&
-                e < NUM_OF_GROUPS &&
-                f < NUM_OF_GROUPS &&
-                g < NUM_OF_GROUPS &&
-                h < NUM_OF_GROUPS &&
-                i < NUM_OF_GROUPS &&
-                j < NUM_OF_GROUPS,
-            "group is out of range"
-        ); // group is out of the 207360 range
     }
 
     function isArtist(address userAddress) public view returns (bool) {

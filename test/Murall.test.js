@@ -54,9 +54,11 @@ contract('MurAll', ([owner, user]) => {
     describe('setPixels', async () => {
         it('does not allow individual pixels out of max pixel resolution range (2073600)', async () => {
             // given
-            const pixelOutOfRange = '0x0000AABB1FA40000000000000000000000000000000000000000000000000000';
+
+            const pixelOutOfRange = '0x001FA40100000000000000000000000000000000000000000000000000000000';
             const individualPixels = Array(1);
             individualPixels[0] = pixelOutOfRange;
+            const colourIndexes = Array(0);
             const pixelGroups = Array(0);
             const pixelGroupIndexes = Array(0);
             const metadata = Array(2);
@@ -66,7 +68,9 @@ contract('MurAll', ([owner, user]) => {
             await setAllowance(6);
 
             await expectRevert(
-                this.contract.setPixels(individualPixels, pixelGroups, pixelGroupIndexes, metadata, { from: user }),
+                this.contract.setPixels(colourIndexes, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
+                    from: user,
+                }),
                 'coord is out of range'
             );
         });
@@ -74,8 +78,9 @@ contract('MurAll', ([owner, user]) => {
         it('does not allow groups of pixels out of max number of pixel group (129600)', async () => {
             // given
             const pixel = '0xAABB1FA400000000000000000000000000000000000000000000000000000000';
-            const pixelGroupOutOfRange = '0x000001FA40000000000000000000000000000000000000000000000000000000';
+            const pixelGroupOutOfRange = '0xFD21000000000000000000000000000000000000000000000000000000000000';
 
+            const colourIndexes = Array(0);
             const individualPixels = Array(0);
             const pixelGroups = Array(1);
             pixelGroups[0] = pixel;
@@ -85,22 +90,29 @@ contract('MurAll', ([owner, user]) => {
             metadata[0] = 1234;
             metadata[1] = 5678;
 
-            await setAllowance(16);
+            await setAllowance(32);
 
             await expectRevert(
-                this.contract.setPixels(individualPixels, pixelGroups, pixelGroupIndexes, metadata, { from: user }),
+                this.contract.setPixels(colourIndexes, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
+                    from: user,
+                }),
                 'group is out of range'
             );
         });
 
         it('emits painted event with correct data', async () => {
             // given
-            const pixel = web3.utils.toBN('0x0000cc83000007cc83000001cc83000002cc83000003cc83000004cc83000005');
+            const colourIndexValue = web3.utils.toBN(
+                '0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899'
+            );
+            const pixel = web3.utils.toBN('0x0012d6870012d6870012d6870012d6870012d6870012d6870012d6870012d687');
             const pixelGroup = web3.utils.toBN('0x26a4d3a4217ad135efa1f04d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab');
             const pixelGroupIndex = web3.utils.toBN(
-                '0x000000000a00001400001e00002800003200003c00004600005000005a000064'
+                '0x3039303930393039303930393039303930393039303930393039303930393039'
             );
 
+            const colourIndexes = Array(1);
+            colourIndexes[0] = colourIndexValue;
             const pixelData = Array(1);
             pixelData[0] = pixel;
             const pixelGroups = Array(1);
@@ -111,11 +123,18 @@ contract('MurAll', ([owner, user]) => {
             metadata[0] = web3.utils.toBN(1234);
             metadata[1] = web3.utils.toBN(5678);
 
-            await setAllowance(22);
+            await setAllowance(40);
 
-            const receipt = await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, metadata, {
-                from: user,
-            });
+            const receipt = await this.contract.setPixels(
+                colourIndexes,
+                pixelData,
+                pixelGroups,
+                pixelGroupIndexes,
+                metadata,
+                {
+                    from: user,
+                }
+            );
             // TODO Openzeppelin test helpers currently can't assert arrays of BigNumber https://github.com/OpenZeppelin/openzeppelin-test-helpers/issues/1
             await expectEvent(receipt, 'Painted', {
                 artist: user,
@@ -129,10 +148,13 @@ contract('MurAll', ([owner, user]) => {
 
         it('artist role assigned to address', async () => {
             // given
-            const pixel = '0x0000cc83000007cc83000001cc83000002cc83000003cc83000004cc83000005';
+            const colourIndexValue = '0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
+            const pixel = '0x0012d6870012d6870012d6870012d6870012d6870012d6870012d6870012d687';
             const pixelGroup = '0x26a4d3a4217ad135efa1f04d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab';
-            const pixelGroupIndex = '0x000000000a00001400001e00002800003200003c00004600005000005a000064';
+            const pixelGroupIndex = '0x3039303930393039303930393039303930393039303930393039303930393039';
 
+            const colourIndexes = Array(1);
+            colourIndexes[0] = colourIndexValue;
             const pixelData = Array(1);
             pixelData[0] = pixel;
             const pixelGroups = Array(1);
@@ -143,12 +165,14 @@ contract('MurAll', ([owner, user]) => {
             metadata[0] = 1234;
             metadata[1] = 5678;
 
-            await setAllowance(22);
+            await setAllowance(40);
 
             assert.isFalse(await this.contract.isArtist(user));
             assert.equal(await this.contract.totalArtists(), 0);
 
-            await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, metadata, { from: user });
+            await this.contract.setPixels(colourIndexes, pixelData, pixelGroups, pixelGroupIndexes, metadata, {
+                from: user,
+            });
 
             assert.isTrue(await this.contract.isArtist(user));
             assert.equal(await this.contract.totalArtists(), 1);
@@ -156,10 +180,13 @@ contract('MurAll', ([owner, user]) => {
 
         it('does not add additional artist role after it is assigned to address', async () => {
             // given
-            const pixel = '0x0000cc83000007cc83000001cc83000002cc83000003cc83000004cc83000005';
+            const colourIndexValue = '0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
+            const pixel = '0x0012d6870012d6870012d6870012d6870012d6870012d6870012d6870012d687';
             const pixelGroup = '0x26a4d3a4217ad135efa1f04d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab';
-            const pixelGroupIndex = '0x000000000a00001400001e00002800003200003c00004600005000005a000064';
+            const pixelGroupIndex = '0x3039303930393039303930393039303930393039303930393039303930393039';
 
+            const colourIndexes = Array(1);
+            colourIndexes[0] = colourIndexValue;
             const pixelData = Array(1);
             pixelData[0] = pixel;
             const pixelGroups = Array(1);
@@ -170,27 +197,35 @@ contract('MurAll', ([owner, user]) => {
             metadata[0] = 1234;
             metadata[1] = 5678;
 
-            await setAllowance(44);
+            await setAllowance(80);
 
             assert.isFalse(await this.contract.isArtist(user));
             assert.equal(await this.contract.totalArtists(), 0);
 
-            await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, metadata, { from: user });
+            await this.contract.setPixels(colourIndexes, pixelData, pixelGroups, pixelGroupIndexes, metadata, {
+                from: user,
+            });
 
             assert.isTrue(await this.contract.isArtist(user));
             assert.equal(await this.contract.totalArtists(), 1);
 
-            await this.contract.setPixels(pixelData, pixelGroups, pixelGroupIndexes, metadata, { from: user });
+            await this.contract.setPixels(colourIndexes, pixelData, pixelGroups, pixelGroupIndexes, metadata, {
+                from: user,
+            });
 
             assert.isTrue(await this.contract.isArtist(user));
             assert.equal(await this.contract.totalArtists(), 1);
         });
 
         it('mints a new token', async () => {
-            const individualPixelsValue = '0x0000AABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF000002';
+            const colourIndexValue = '0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
+            const individualPixelsValue = '0x0012d6870012d6870012d6870012d6870012d6870012d6870012d6870012d687';
             const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x000000000a00001400001e00002800003200003c00004600005000005a000064';
-            const expectedHashOfData = '0x1b0dfe921d77334410541d46c852f429cb60628e4b5f1dfac929819be4488eab';
+            const pixelGroupIndexesValue = '0x3039303930393039303930393039303930393039303930393039303930393039';
+            const expectedHashOfData = '0xe966bde86659c750437c8b6b8542999eec42a1599b5d26f51691bc935b0a8c40';
+
+            const colourIndexes = Array(1);
+            colourIndexes[0] = colourIndexValue;
             const individualPixels = Array(1);
             individualPixels[0] = individualPixelsValue;
             const pixelGroups = Array(1);
@@ -202,9 +237,11 @@ contract('MurAll', ([owner, user]) => {
             metadata[0] = 1234;
             metadata[1] = 5678;
 
-            await setAllowance(22);
+            await setAllowance(40);
 
-            await this.contract.setPixels(individualPixels, pixelGroups, pixelGroupIndexes, metadata, { from: user });
+            await this.contract.setPixels(colourIndexes, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
+                from: user,
+            });
 
             assert.equal(await this.murAllNFT.totalSupply(), 1);
             assert.equal(await this.murAllNFT.ownerOf(firstTokenId), user);
@@ -212,10 +249,13 @@ contract('MurAll', ([owner, user]) => {
         });
 
         it('burns PAINT token equal to the amount of pixels painted', async () => {
-            const individualPixelsValue = '0x0000AABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF000002';
+            const colourIndexValue = '0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
+            const individualPixelsValue = '0x0012d6870012d6870012d6870012d6870012d6870012d6870012d6870012d687';
             const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x000000000a00001400001e00002800003200003c00004600005000005a000064';
+            const pixelGroupIndexesValue = '0x3039303930393039303930393039303930393039303930393039303930393039';
 
+            const colourIndexes = Array(1);
+            colourIndexes[0] = colourIndexValue;
             const individualPixels = Array(1);
             individualPixels[0] = individualPixelsValue;
             const pixelGroups = Array(1);
@@ -227,13 +267,15 @@ contract('MurAll', ([owner, user]) => {
             metadata[1] = 5678;
 
             const startSupply = await this.paintToken.totalSupply();
-            const pixelCount = 22;
+            const pixelCount = 40;
             const requiredTokens = web3.utils.toBN(PRICE_PER_PIXEL).mul(web3.utils.toBN(pixelCount));
             const expectedSupply = startSupply - requiredTokens;
 
             await setAllowance(pixelCount);
 
-            await this.contract.setPixels(individualPixels, pixelGroups, pixelGroupIndexes, metadata, { from: user });
+            await this.contract.setPixels(colourIndexes, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
+                from: user,
+            });
 
             assert.equal(await this.paintToken.totalSupply(), expectedSupply);
         });

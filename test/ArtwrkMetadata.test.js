@@ -8,10 +8,13 @@ const MurAllNFT = artifacts.require('./MurAllNFT.sol');
 contract('ArtwrkMetadata', ([owner, user]) => {
     const mintTestToken = async (fromAddress, metadata) => {
         // Given token from an ERC721 contract (not sure how to mock this)
+        const colourIndexValue = '0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
         const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
         const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
         const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
 
+        const colourIndexes = Array(1);
+        colourIndexes[0] = colourIndexValue;
         const individualPixels = Array(1);
         individualPixels[0] = individualPixelsValue;
         const pixelGroups = Array(1);
@@ -19,9 +22,17 @@ contract('ArtwrkMetadata', ([owner, user]) => {
         const pixelGroupIndexes = Array(1);
         pixelGroupIndexes[0] = pixelGroupIndexesValue;
 
-        await this.murAllNFT.mint(fromAddress, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-            from: owner,
-        });
+        await this.murAllNFT.mint(
+            fromAddress,
+            colourIndexes,
+            individualPixels,
+            pixelGroups,
+            pixelGroupIndexes,
+            metadata,
+            {
+                from: owner,
+            }
+        );
     };
 
     const getAddressString = (address) => {

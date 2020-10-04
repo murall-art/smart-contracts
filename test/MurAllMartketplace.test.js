@@ -14,10 +14,13 @@ contract('MurAllMarketplace', ([owner, user]) => {
 
     const mintTestToken = async (fromAddress) => {
         // Given token from an ERC721 contract (not sure how to mock this)
+        const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
         const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
         const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
         const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
 
+        const colourIndex = Array(1);
+        colourIndex[0] = colourIndexValue;
         const individualPixels = Array(1);
         individualPixels[0] = individualPixelsValue;
         const pixelGroups = Array(1);
@@ -28,9 +31,17 @@ contract('MurAllMarketplace', ([owner, user]) => {
         metadata[0] = 1234;
         metadata[1] = 5678;
 
-        await this.murAllNFT.mint(fromAddress, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-            from: owner,
-        });
+        await this.murAllNFT.mint(
+            fromAddress,
+            colourIndex,
+            individualPixels,
+            pixelGroups,
+            pixelGroupIndexes,
+            metadata,
+            {
+                from: owner,
+            }
+        );
     };
 
     const obtainTotalGasUsedForTransaction = async (receipt) => {
