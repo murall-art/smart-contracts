@@ -1,0 +1,9 @@
+pragma solidity ^0.6.0;
+
+abstract contract DataValidator {
+    function validate(
+        uint256[] calldata pixelData,
+        uint256[] calldata pixelGroups,
+        uint256[] calldata pixelGroupIndexes
+    ) external virtual pure returns (uint256 numberOfPixels);
+}
