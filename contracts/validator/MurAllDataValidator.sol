@@ -8,15 +8,18 @@ contract MurAllDataValidator is DataValidator {
     uint256 constant NUM_OF_GROUPS = 64800; // 2073600 pixels / 32 pixels per group
     uint256 constant MAX_INDIVIDUAL_PIXEL_ARRAY_LENGTH = 259200; //Each slot in the data fits 8 px and 8 indexes (2073600 / 8)
     uint256 constant NUMBER_PER_INDEX_GROUP = 16;
+    // 0x000000000000000000000000000000000000000000000000000000000000000F
+    uint256 constant METADATA_HAS_ALPHA_CHANNEL_BYTES_MASK = 15;
 
     function validate(
         uint256[] memory pixelData,
         uint256[] memory pixelGroups,
-        uint256[] memory pixelGroupIndexes
+        uint256[] memory pixelGroupIndexes,
+        uint256[2] memory metadata
     ) public override pure returns (uint256 numberOfPixels) {
         uint256 pixelCount = 0;
         uint256 len = pixelData.length;
-        require(len <= MAX_INDIVIDUAL_PIXEL_ARRAY_LENGTH, "pixelData too large"); 
+        require(len <= MAX_INDIVIDUAL_PIXEL_ARRAY_LENGTH, "pixelData too large");
 
         if (len > 0) {
             // Do first set of pixels separately to initialise currentGroup
@@ -37,70 +40,94 @@ contract MurAllDataValidator is DataValidator {
         }
 
         len = pixelGroups.length;
+        uint256 groupLen = pixelGroupIndexes.length;
 
         pixelCount += (len * NUMBER_PER_GROUP); // 32 pixels per group
-
         require(len <= NUM_OF_GROUPS, "pixel groups too large"); //Each slot in the data fits 32 px (2073600 / 32)
-        len = pixelGroupIndexes.length;
-        for (uint256 currentIndex = 0; currentIndex < len; currentIndex++) {
-            require(checkGroupIndexes(pixelGroupIndexes[currentIndex]) == 0, "group is out of range"); // group is out of the 207360 range
+
+        (uint256 quotient, uint256 remainder) = getDivided(len, 16);
+
+        if (remainder != 0) {
+            quotient += 1; // e.g. when groupLen = 16, groupLen/16 = 1, we expect a group index length of 1 as 16 positions fit in 1 uint256
+        }
+
+        require(groupLen == quotient, "unexpected group index array length"); //Each group slot fits 16 coords of each 32 px group
+
+        if (hasAlphaChannel(metadata[1])) {
+            for (uint256 currentIndex = 0; currentIndex < groupLen; currentIndex++) {
+                require(checkGroupIndexes(pixelGroupIndexes[currentIndex]) == 0, "group is out of range"); // group is out of the 207360 range
+                pixelCount -= checkGroupForZeroes(pixelGroups[currentIndex]);
+            }
+            for (uint256 currentIndex = groupLen; currentIndex < len; currentIndex++) {
+                pixelCount -= checkGroupForZeroes(pixelGroups[currentIndex]);
+            }
+        } else {
+            for (uint256 currentIndex = 0; currentIndex < groupLen; currentIndex++) {
+                require(checkGroupIndexes(pixelGroupIndexes[currentIndex]) == 0, "group is out of range"); // group is out of the 207360 range
+            }
         }
 
         return pixelCount;
     }
 
+    function getDivided(uint256 numerator, uint256 denominator)
+        internal
+        pure
+        returns (uint256 quotient, uint256 remainder)
+    {
+        quotient = numerator / denominator;
+        remainder = numerator - denominator * quotient;
+    }
+
     function checkIndividualPixelIndexes(uint256 toCheck) internal pure returns (uint256 valid) {
         assembly {
-            let converted := and(toCheck, 0x0000000000000000000000000000000000000000000000000000000000FFFFFF) // first is actually last 2 bytes in the byte array (uint256 converted to uint16)
-            if gt(converted, MAX_PIXEL_RES) {
+            // first is actually last 2 bytes in the byte array (uint256 converted to uint16)
+            if gt(and(toCheck, 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
                 valid := 1
             }
 
             mstore(0x1C, toCheck)
-            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
-            if gt(converted, MAX_PIXEL_RES) {
+            if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
                 valid := 1
             }
 
             mstore(0x18, toCheck)
-            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
-            if gt(converted, MAX_PIXEL_RES) {
+            if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
                 valid := 1
             }
 
             mstore(0x14, toCheck)
-            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
-            if gt(converted, MAX_PIXEL_RES) {
+            if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
                 valid := 1
             }
 
             mstore(0x10, toCheck)
-            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
-            if gt(converted, MAX_PIXEL_RES) {
+            if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
                 valid := 1
             }
 
             mstore(0x0C, toCheck)
-            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
-            if gt(converted, MAX_PIXEL_RES) {
+            if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
                 valid := 1
             }
 
             mstore(0x08, toCheck)
-            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
-            if gt(converted, MAX_PIXEL_RES) {
+            if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
                 valid := 1
             }
 
             mstore(0x04, toCheck)
-            converted := and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF)
-            if gt(converted, MAX_PIXEL_RES) {
+            if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
                 valid := 1
             }
         }
     }
 
-    function decodeAndCheckIndividualPixelIndexes(uint256 toCheck) public pure returns (uint24[8] memory converted) {
+    function hasAlphaChannel(uint256 metadata) internal pure returns (bool) {
+        return (METADATA_HAS_ALPHA_CHANNEL_BYTES_MASK & metadata) != 0;
+    }
+
+    function decodeAndCheckIndividualPixelIndexes(uint256 toCheck) internal pure returns (uint24[8] memory converted) {
         assembly {
             mstore(converted, toCheck) // first is actually last 3 bytes in the byte array (uint256 converted to uint24)
             let len := 0x07
@@ -129,101 +156,250 @@ contract MurAllDataValidator is DataValidator {
         ); // coordinate is in 1920 x 1080 px resolution range
     }
 
-    function checkGroupIndexes(uint256 toCheck) public pure returns (uint256 valid) {
+    function checkGroupIndexes(uint256 toCheck) internal pure returns (uint256 valid) {
         assembly {
-            let converted := and(toCheck, 0x000000000000000000000000000000000000000000000000000000000000FFFF) // first is actually last 2 bytes in the byte array (uint256 converted to uint16)
-            if gt(converted, NUM_OF_GROUPS) {
+            // first is actually last 2 bytes in the byte array (uint256 converted to uint16)
+            if gt(and(toCheck, 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x1E, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x1C, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x1A, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x18, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x16, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x14, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x12, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x10, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x0E, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x0C, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x0A, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x08, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x06, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x04, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
             }
 
             mstore(0x02, toCheck)
-            converted := and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF)
-            if gt(converted, NUM_OF_GROUPS) {
+            if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
                 valid := 1
+            }
+        }
+    }
+
+    function checkGroupForZeroes(uint256 toCheck) internal pure returns (uint256 amountOfZeroes) {
+        assembly {
+            // first is actually last 2 bytes in the byte array (uint256 converted to uint16)
+            if iszero(and(toCheck, 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x1F, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x1E, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x1D, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x1C, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x1B, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x1A, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x19, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x18, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x17, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x16, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x15, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x14, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x13, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x12, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x11, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x10, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x0F, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x0E, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x0D, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x0C, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x0B, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x0A, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x09, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x08, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x07, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x06, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x05, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x04, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x03, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x02, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
+            }
+
+            mstore(0x01, toCheck)
+            if iszero(and(mload(0), 0x00000000000000000000000000000000000000000000000000000000000000FF)) {
+                amountOfZeroes := add(amountOfZeroes, 1)
             }
         }
     }
