@@ -130,18 +130,27 @@ contract MurAllDataValidator is DataValidator {
     function decodeAndCheckIndividualPixelIndexes(uint256 toCheck) internal pure returns (uint24[8] memory converted) {
         assembly {
             mstore(converted, toCheck) // first is actually last 3 bytes in the byte array (uint256 converted to uint24)
-            let len := 0x07
-            let offset := 0x1C
 
-            for {
-                let i := 0
-            } lt(i, len) {
-                i := add(i, 1)
-            } {
-                mstore(offset, toCheck)
-                mstore(add(converted, add(0x20, mul(i, 0x20))), mload(0)) // add data to the array, data offset = 0x20 (1st 32 is reserved for size) & i*32 to pickup the right index mstore(add(converted, add(0x20, mul(1, 0x20))), toCheck) // add data to the array, data offset = 0x20 (1st 32 is reserved for size) & i*32 to pickup the right index
-                offset := sub(offset, 0x04)
-            }
+            mstore(0x1C, toCheck)
+            mstore(add(converted, 0x20), mload(0))
+
+            mstore(0x18, toCheck)
+            mstore(add(converted, 0x40), mload(0))
+
+            mstore(0x14, toCheck)
+            mstore(add(converted, 0x60), mload(0))
+
+            mstore(0x10, toCheck)
+            mstore(add(converted, 0x80), mload(0))
+
+            mstore(0x0C, toCheck)
+            mstore(add(converted, 0xA0), mload(0))
+
+            mstore(0x08, toCheck)
+            mstore(add(converted, 0xC0), mload(0))
+
+            mstore(0x04, toCheck)
+            mstore(add(converted, 0xE0), mload(0))
         }
         require(
             converted[0] < MAX_PIXEL_RES &&
