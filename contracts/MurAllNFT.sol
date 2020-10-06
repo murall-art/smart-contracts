@@ -5,15 +5,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MurAllNFT is ERC721, Ownable {
     uint256 constant FILL_DATA_GAS_RESERVE = 26000;
-    // 0xffffff0000000000000000000000000000000000000000000000000000000000
+    // 0xFFFFFF0000000000000000000000000000000000000000000000000000000000
     uint256 constant FIRST_3_BYTES_MASK = 115792082335569848633007197573932045576244532214531591869071028845388905840640;
     // 0x000000000000000000000000000000000000000000000000000000000000000F
     uint256 constant ARTWORK_COMPLETE_BYTES_MASK = 15;
     // 0x000000000000000000000000000000000000000000000000000000000000000F
     uint256 constant METADATA_HAS_ALPHA_CHANNEL_BYTES_MASK = 15;
-    // 0x000000000000000000000000000000000000000000000000000000000000FFFF
-    uint256 constant METADATA_ALPHA_CHANNEL_BYTES_MASK = 65535;
     uint256 constant CONVERSION_SHIFT_BYTES = 232;
+    uint256 constant CONVERSION_SHIFT_BYTES_RGB565 = 240;
 
     struct ArtWork {
         bytes32 dataHash;
@@ -226,7 +225,8 @@ contract MurAllNFT is ERC721, Ownable {
 
     function getAlphaChannel(uint256 id) public view returns (uint256) {
         require(hasAlphaChannel(id), "Artwork has no alpha");
-        return METADATA_ALPHA_CHANNEL_BYTES_MASK & (artworks[id].metadata >> 4);
+        // alpha is the first color in the color index
+        return artworks[id].colorIndex[0] >> CONVERSION_SHIFT_BYTES_RGB565;
     }
 
     function getArtist(uint256 id) public view returns (address) {

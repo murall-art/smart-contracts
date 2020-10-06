@@ -8,7 +8,7 @@ const MurAllNFT = artifacts.require('./MurAllNFT.sol');
 contract('ArtwrkMetadata', ([owner, user]) => {
     const mintTestToken = async (fromAddress, metadata) => {
         // Given token from an ERC721 contract (not sure how to mock this)
-        const colourIndexValue = '0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
+        const colourIndexValue = '0x10e1ccddeeff00112233445566778899aabbccddeeff00112233445566778899';
         const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
         const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
         const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
@@ -68,7 +68,7 @@ contract('ArtwrkMetadata', ([owner, user]) => {
         it('returns correct metadata with alpha channel', async () => {
             const metadata = Array(2);
             metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000010E11';
+            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
 
             const expectedMetadata =
                 '{\n  "name": "hello world!",\n  "description": "By Artist ' +
