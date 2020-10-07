@@ -24,7 +24,7 @@ contract MurAllDataValidator is DataValidator {
         if (len > 0) {
             // Do first set of pixels separately to initialise currentGroup
             for (uint256 currentIndex = 0; currentIndex < len - 1; currentIndex++) {
-                require(checkIndividualPixelIndexes(pixelData[currentIndex]) == 0, "coord is out of range"); // coordinate is in 1920 x 1080 px resolution range
+                checkIndividualPixelIndexes(pixelData[currentIndex]); 
             }
             //assuming all individual pixel groups except the last have all 6 pixels filled
             pixelCount += (6 * (len - 1)); // 6 individual pixels per uint256
@@ -55,7 +55,7 @@ contract MurAllDataValidator is DataValidator {
 
         if (hasAlphaChannel(metadata[1])) {
             for (uint256 currentIndex = 0; currentIndex < groupLen; currentIndex++) {
-                require(checkGroupIndexes(pixelGroupIndexes[currentIndex]) == 0, "group is out of range"); // group is out of the 207360 range
+                checkGroupIndexes(pixelGroupIndexes[currentIndex]); 
                 pixelCount -= checkGroupForZeroes(pixelGroups[currentIndex]);
             }
             for (uint256 currentIndex = groupLen; currentIndex < len; currentIndex++) {
@@ -63,7 +63,7 @@ contract MurAllDataValidator is DataValidator {
             }
         } else {
             for (uint256 currentIndex = 0; currentIndex < groupLen; currentIndex++) {
-                require(checkGroupIndexes(pixelGroupIndexes[currentIndex]) == 0, "group is out of range"); // group is out of the 207360 range
+                checkGroupIndexes(pixelGroupIndexes[currentIndex]); 
             }
         }
 
@@ -79,46 +79,46 @@ contract MurAllDataValidator is DataValidator {
         remainder = numerator - denominator * quotient;
     }
 
-    function checkIndividualPixelIndexes(uint256 toCheck) internal pure returns (uint256 valid) {
+    function checkIndividualPixelIndexes(uint256 toCheck) internal pure {
         assembly {
             // first is actually last 2 bytes in the byte array (uint256 converted to uint16)
             if gt(and(toCheck, 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
-                valid := 1
+                revert(0, 0) // coordinate is in 1920 x 1080 px resolution range
             }
 
             mstore(0x1C, toCheck)
             if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
-                valid := 1
+                revert(0, 0) // coordinate is in 1920 x 1080 px resolution range
             }
 
             mstore(0x18, toCheck)
             if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
-                valid := 1
+                revert(0, 0) // coordinate is in 1920 x 1080 px resolution range
             }
 
             mstore(0x14, toCheck)
             if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
-                valid := 1
+                revert(0, 0) // coordinate is in 1920 x 1080 px resolution range
             }
 
             mstore(0x10, toCheck)
             if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
-                valid := 1
+                revert(0, 0) // coordinate is in 1920 x 1080 px resolution range
             }
 
             mstore(0x0C, toCheck)
             if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
-                valid := 1
+                revert(0, 0) // coordinate is in 1920 x 1080 px resolution range
             }
 
             mstore(0x08, toCheck)
             if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
-                valid := 1
+                revert(0, 0) // coordinate is in 1920 x 1080 px resolution range
             }
 
             mstore(0x04, toCheck)
             if gt(and(mload(0), 0x0000000000000000000000000000000000000000000000000000000000FFFFFF), MAX_PIXEL_RES) {
-                valid := 1
+                revert(0, 0) // coordinate is in 1920 x 1080 px resolution range
             }
         }
     }
@@ -165,86 +165,86 @@ contract MurAllDataValidator is DataValidator {
         ); // coordinate is in 1920 x 1080 px resolution range
     }
 
-    function checkGroupIndexes(uint256 toCheck) internal pure returns (uint256 valid) {
+    function checkGroupIndexes(uint256 toCheck) internal pure {
         assembly {
             // first is actually last 2 bytes in the byte array (uint256 converted to uint16)
             if gt(and(toCheck, 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x1E, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x1C, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x1A, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x18, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x16, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x14, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x12, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x10, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x0E, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x0C, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x0A, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x08, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x06, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x04, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
 
             mstore(0x02, toCheck)
             if gt(and(mload(0), 0x000000000000000000000000000000000000000000000000000000000000FFFF), NUM_OF_GROUPS) {
-                valid := 1
+                revert(0, 0) // group is out of the 207360 range
             }
         }
     }

@@ -33,11 +33,10 @@ contract('MurAllDataValidator', ([owner, user]) => {
             metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
             metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
 
-            await expectRevert(
+            await expectRevert.unspecified(
                 this.contract.validate(individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
                     from: user,
-                }),
-                'coord is out of range'
+                })
             );
         });
 
@@ -54,11 +53,10 @@ contract('MurAllDataValidator', ([owner, user]) => {
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupOutOfRange;
 
-            await expectRevert(
+            await expectRevert.unspecified(
                 this.contract.validate(individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
                     from: user,
-                }),
-                'group is out of range'
+                })
             );
         });
 
