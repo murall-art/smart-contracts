@@ -5,6 +5,7 @@ const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 const MurAll = artifacts.require('./MurAll.sol');
 const MurAllNFT = artifacts.require('./MurAllNFT.sol');
 const PaintToken = artifacts.require('./PaintToken.sol');
+const DataValidator = artifacts.require('./validator/MurAllDataValidator.sol');
 
 const PRICE_PER_PIXEL = 500000000000000000;
 
@@ -18,7 +19,10 @@ contract('MurAll', ([owner, user]) => {
     beforeEach(async () => {
         this.murAllNFT = await MurAllNFT.new({ from: owner });
         this.paintToken = await PaintToken.new({ from: owner });
-        this.contract = await MurAll.new(this.paintToken.address, this.murAllNFT.address, { from: owner });
+        this.dataValidator = await DataValidator.new({ from: owner });
+        this.contract = await MurAll.new(this.paintToken.address, this.murAllNFT.address, this.dataValidator.address, {
+            from: owner,
+        });
         await this.murAllNFT.transferOwnership(this.contract.address, { from: owner });
     });
 
@@ -52,54 +56,6 @@ contract('MurAll', ([owner, user]) => {
     });
 
     describe('setPixels', async () => {
-        it('does not allow individual pixels out of max pixel resolution range (2073600)', async () => {
-            // given
-
-            const pixelOutOfRange = '0x001FA40100000000000000000000000000000000000000000000000000000000';
-            const individualPixels = Array(1);
-            individualPixels[0] = pixelOutOfRange;
-            const colourIndexes = Array(0);
-            const pixelGroups = Array(0);
-            const pixelGroupIndexes = Array(0);
-            const metadata = Array(2);
-            metadata[0] = 1234;
-            metadata[1] = 5678;
-
-            await setAllowance(6);
-
-            await expectRevert(
-                this.contract.setPixels(colourIndexes, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                    from: user,
-                }),
-                'coord is out of range'
-            );
-        });
-
-        it('does not allow groups of pixels out of max number of pixel group (129600)', async () => {
-            // given
-            const pixel = '0xAABB1FA400000000000000000000000000000000000000000000000000000000';
-            const pixelGroupOutOfRange = '0xFD21000000000000000000000000000000000000000000000000000000000000';
-
-            const colourIndexes = Array(0);
-            const individualPixels = Array(0);
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixel;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupOutOfRange;
-            const metadata = Array(2);
-            metadata[0] = 1234;
-            metadata[1] = 5678;
-
-            await setAllowance(32);
-
-            await expectRevert(
-                this.contract.setPixels(colourIndexes, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                    from: user,
-                }),
-                'group is out of range'
-            );
-        });
-
         it('emits painted event with correct data', async () => {
             // given
             const colourIndexValue = web3.utils.toBN(

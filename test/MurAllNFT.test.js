@@ -544,7 +544,7 @@ contract('MurAllNFT', (accounts) => {
 
         it('get alpha channel returns correct alpha channel for minted token when has alpha', async () => {
             // Given minted token
-            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
+            const colourIndexValue = '0x10E1CCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
             const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
             const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
             const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
@@ -558,7 +558,7 @@ contract('MurAllNFT', (accounts) => {
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndexesValue;
             const name = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            const otherInfo = '0x0004D200162E0000000000000000000000000000000000000000000000010E11';
+            const otherInfo = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
 
             const metadata = Array(2);
             metadata[0] = name;
@@ -574,7 +574,7 @@ contract('MurAllNFT', (accounts) => {
             const returnedAlpha = await contract.getAlphaChannel(tokenId);
 
             // returns expected alpha channel
-            assert.equal(returnedAlpha, expectedAlpha);
+            assert.isTrue(web3.utils.toBN(expectedAlpha).eq(returnedAlpha));
         });
 
         it('get alpha channel reverts when minted token has no alpha', async () => {
@@ -593,7 +593,7 @@ contract('MurAllNFT', (accounts) => {
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndexesValue;
             const name = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            const otherInfo = '0x0004D200162E0000000000000000000000000000000000000000000000010E10';
+            const otherInfo = '0x0004D200162E0000000000000000000000000000000000000000000000000000';
 
             const metadata = Array(2);
             metadata[0] = name;
@@ -626,7 +626,7 @@ contract('MurAllNFT', (accounts) => {
             pixelGroupIndexes[0] = pixelGroupIndexesValue;
             const name = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
             // last bit represents the alpha channel existing
-            const otherInfo = '0x0004D200162E0000000000000000000000000000000000000000000000010E11';
+            const otherInfo = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
 
             const metadata = Array(2);
             metadata[0] = name;
@@ -662,7 +662,7 @@ contract('MurAllNFT', (accounts) => {
             pixelGroupIndexes[0] = pixelGroupIndexesValue;
             const name = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
             // last bit represents the alpha channel existing
-            const otherInfo = '0x0004D200162E0000000000000000000000000000000000000000000000010E10';
+            const otherInfo = '0x0004D200162E0000000000000000000000000000000000000000000000000000';
 
             const metadata = Array(2);
             metadata[0] = name;
