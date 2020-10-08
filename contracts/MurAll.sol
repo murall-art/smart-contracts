@@ -6,11 +6,6 @@ import {DataValidator} from "./validator/DataValidator.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract MurAll is ReentrancyGuard {
-    uint256 constant NUM_OF_GROUPS = 64800; // 2073600 pixels / 32 pixels per group
-    uint256 constant MAX_PIXEL_RES = 2073600;
-    uint256 constant NUMBER_PER_GROUP = 32;
-    uint256 constant NUMBER_PER_INDEX_GROUP = 16;
-
     uint256 constant PRICE_PER_PIXEL = 500000000000000000;
 
     PaintToken public paintToken;

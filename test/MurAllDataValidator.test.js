@@ -21,10 +21,10 @@ contract('MurAllDataValidator', ([owner, user]) => {
     });
 
     describe('validate', async () => {
-        it('does not allow individual pixels out of max pixel resolution range (2073600)', async () => {
+        it('does not allow individual pixels out of max pixel resolution range (2097152)', async () => {
             // given
 
-            const pixelOutOfRange = '0x001FA40100000000000000000000000000000000000000000000000000000000';
+            const pixelOutOfRange = '0x0020000100000000000000000000000000000000000000000000000000000000';
             const individualPixels = Array(1);
             individualPixels[0] = pixelOutOfRange;
             const pixelGroups = Array(0);
@@ -40,25 +40,6 @@ contract('MurAllDataValidator', ([owner, user]) => {
             );
         });
 
-        it('does not allow groups of pixels out of max number of pixel group (129600)', async () => {
-            // given
-            const pixel = '0xAABB1FA400000000000000000000000000000000000000000000000000000000';
-            const pixelGroupOutOfRange = '0xFD21000000000000000000000000000000000000000000000000000000000000';
-            const metadata = Array(2);
-            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-            const individualPixels = Array(0);
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixel;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupOutOfRange;
-
-            await expectRevert.unspecified(
-                this.contract.validate(individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                    from: user,
-                })
-            );
-        });
 
         it('does not allow group index array with incorrect amount', async () => {
             // given
