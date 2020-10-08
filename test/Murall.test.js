@@ -225,15 +225,17 @@ contract('MurAll', ([owner, user]) => {
             const startSupply = await this.paintToken.totalSupply();
             const pixelCount = 40;
             const requiredTokens = web3.utils.toBN(PRICE_PER_PIXEL).mul(web3.utils.toBN(pixelCount));
-            const expectedSupply = startSupply - requiredTokens;
+            const expectedSupply = web3.utils.toBN(startSupply).sub(web3.utils.toBN(requiredTokens));
 
             await setAllowance(pixelCount);
 
             await this.contract.setPixels(colourIndexes, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
                 from: user,
             });
+            
+            const endSupply = await this.paintToken.totalSupply();
 
-            assert.equal(await this.paintToken.totalSupply(), expectedSupply);
+            assert.isTrue(web3.utils.toBN(endSupply).eq(web3.utils.toBN(expectedSupply)));
         });
     });
 
