@@ -76,8 +76,9 @@ contract('MurAll', ([owner, user]) => {
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndex;
             const metadata = Array(2);
-            metadata[0] = web3.utils.toBN(1234);
-            metadata[1] = web3.utils.toBN(5678);
+            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
+            // transparency disabled
+            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000000';
 
             await setAllowance(40);
 
@@ -100,6 +101,40 @@ contract('MurAll', ([owner, user]) => {
                 // pixelGroupIndexes: pixelGroupIndexes,
                 // metadata: metadata,
             });
+        });
+
+        it('reverts transaction when pixel count is zero', async () => {
+            // given
+            const colourIndexValue = web3.utils.toBN(
+                '0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899'
+            );
+            const pixel = web3.utils.toBN('0x0000000000000000000000000000000000000000000000000000000000000000');
+            const pixelGroup = web3.utils.toBN('0x0000000000000000000000000000000000000000000000000000000000000000');
+            const pixelGroupIndex = web3.utils.toBN(
+                '0x0000000000000000000000000000000000000000000000000000000000000000'
+            );
+
+            const colourIndexes = Array(1);
+            colourIndexes[0] = colourIndexValue;
+            const pixelData = Array(1);
+            pixelData[0] = pixel;
+            const pixelGroups = Array(1);
+            pixelGroups[0] = pixelGroup;
+            const pixelGroupIndexes = Array(1);
+            pixelGroupIndexes[0] = pixelGroupIndex;
+            const metadata = Array(2);
+            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
+            // transparency enabled
+            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
+
+            await setAllowance(40);
+
+            await expectRevert(
+                this.contract.setPixels(colourIndexes, pixelData, pixelGroups, pixelGroupIndexes, metadata, {
+                    from: user,
+                }),
+                'No pixels to draw'
+            );
         });
 
         it('artist role assigned to address', async () => {
@@ -222,19 +257,19 @@ contract('MurAll', ([owner, user]) => {
             metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
             metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000000';
 
-            const startSupply = await this.paintToken.totalSupply();
             const pixelCount = 40;
+            await setAllowance(pixelCount);
+
+            const startSupply = await this.paintToken.totalSupply();
             const requiredTokens = web3.utils.toBN(PRICE_PER_PIXEL).mul(web3.utils.toBN(pixelCount));
             const expectedSupply = web3.utils.toBN(startSupply).sub(web3.utils.toBN(requiredTokens));
-
-            await setAllowance(pixelCount);
 
             await this.contract.setPixels(colourIndexes, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
                 from: user,
             });
 
             const endSupply = await this.paintToken.totalSupply();
-            
+
             assert.isTrue(web3.utils.toBN(endSupply).eq(web3.utils.toBN(expectedSupply)));
         });
     });

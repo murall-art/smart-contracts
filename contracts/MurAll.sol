@@ -53,6 +53,7 @@ contract MurAll is ReentrancyGuard {
         require(colorIndex.length <= 16, "colour index too large"); // max 256 colors in groups of 16 (16 groups of 16 colors = 256 colors)
 
         uint256 pixelCount = dataValidator.validate(individualPixels, pixelGroups, pixelGroupIndexes, metadata);
+        require(pixelCount > 0, "No pixels to draw");
 
         paintToken.burnFrom(msg.sender, PRICE_PER_PIXEL * pixelCount);
 
