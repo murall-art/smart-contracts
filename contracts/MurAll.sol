@@ -37,11 +37,11 @@ contract MurAll is ReentrancyGuard {
     );
 
     /**
-     * @param colorIndex           - color index defining the 256 colors the pixels reference at display time (RGB565 format, 2 bytes per color)
-     * @param individualPixels     - individual pixel references to the color index (1 bytes) twinned with their respective positions (3 bytes) - 8 pixels per uint256
+     * @param colorIndex           - Color index defining the 256 colors the pixels reference at display time (RGB565 format, 2 bytes per color)
+     * @param individualPixels     - Individual pixel references to the color index (1 byte) twinned with respective group position (2 bytes) and place within the group (1 byte) - 8 pixels per uint256
      * @param pixelGroups          - RGB pixels in groups of 32 (1 pixel reference every 1 byte)
      * @param pixelGroupIndexes    - Group indexes matching the groups (1 index for every 2 bytes, 16 indexes per 32 byte entry)
-     * @param metadata             - an array of 2 metadata items in order: name (32 byte string converted to uint256), other metadata (formatted byte array consiting of number, seriesId, alpha channel and alpha channel flag)
+     * @param metadata             - Array of 2 metadata items in order: name (32 byte string converted to uint256), other metadata (formatted byte array consiting of number, seriesId, and alpha channel flag which takes the first colour as alpha)
      */
     function setPixels(
         uint256[] memory colorIndex,

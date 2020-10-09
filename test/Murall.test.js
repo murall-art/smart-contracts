@@ -61,7 +61,7 @@ contract('MurAll', ([owner, user]) => {
             const colourIndexValue = web3.utils.toBN(
                 '0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899'
             );
-            const pixel = web3.utils.toBN('0x0012d6870012d6870012d6870012d6870012d6870012d6870012d6870012d687');
+            const pixel = web3.utils.toBN('0x0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F');
             const pixelGroup = web3.utils.toBN('0x26a4d3a4217ad135efa1f04d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab');
             const pixelGroupIndex = web3.utils.toBN(
                 '0x3039303930393039303930393039303930393039303930393039303930393039'
@@ -105,7 +105,7 @@ contract('MurAll', ([owner, user]) => {
         it('artist role assigned to address', async () => {
             // given
             const colourIndexValue = '0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
-            const pixel = '0x0012d6870012d6870012d6870012d6870012d6870012d6870012d6870012d687';
+            const pixel = '0x0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F';
             const pixelGroup = '0x26a4d3a4217ad135efa1f04d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab';
             const pixelGroupIndex = '0x3039303930393039303930393039303930393039303930393039303930393039';
 
@@ -137,7 +137,7 @@ contract('MurAll', ([owner, user]) => {
         it('does not add additional artist role after it is assigned to address', async () => {
             // given
             const colourIndexValue = '0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
-            const pixel = '0x0012d6870012d6870012d6870012d6870012d6870012d6870012d6870012d687';
+            const pixel = '0x0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F';
             const pixelGroup = '0x26a4d3a4217ad135efa1f04d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab';
             const pixelGroupIndex = '0x3039303930393039303930393039303930393039303930393039303930393039';
 
@@ -175,10 +175,10 @@ contract('MurAll', ([owner, user]) => {
 
         it('mints a new token', async () => {
             const colourIndexValue = '0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
-            const individualPixelsValue = '0x0012d6870012d6870012d6870012d6870012d6870012d6870012d6870012d687';
+            const individualPixelsValue = '0x0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F';
             const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
             const pixelGroupIndexesValue = '0x3039303930393039303930393039303930393039303930393039303930393039';
-            const expectedHashOfData = '0xe966bde86659c750437c8b6b8542999eec42a1599b5d26f51691bc935b0a8c40';
+            const expectedHashOfData = '0x0bdd196386bbbe2dc1cd497aec944178f12600c8015e10ad11e9a40e8ad710eb';
 
             const colourIndexes = Array(1);
             colourIndexes[0] = colourIndexValue;
@@ -206,7 +206,7 @@ contract('MurAll', ([owner, user]) => {
 
         it('burns PAINT token equal to the amount of pixels painted', async () => {
             const colourIndexValue = '0xaabbccddeeff00112233445566778899aabbccddeeff00112233445566778899';
-            const individualPixelsValue = '0x0012d6870012d6870012d6870012d6870012d6870012d6870012d6870012d687';
+            const individualPixelsValue = '0x0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F';
             const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
             const pixelGroupIndexesValue = '0x3039303930393039303930393039303930393039303930393039303930393039';
 
@@ -219,8 +219,8 @@ contract('MurAll', ([owner, user]) => {
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndexesValue;
             const metadata = Array(2);
-            metadata[0] = 1234;
-            metadata[1] = 5678;
+            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
+            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000000';
 
             const startSupply = await this.paintToken.totalSupply();
             const pixelCount = 40;
@@ -232,9 +232,9 @@ contract('MurAll', ([owner, user]) => {
             await this.contract.setPixels(colourIndexes, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
                 from: user,
             });
-            
-            const endSupply = await this.paintToken.totalSupply();
 
+            const endSupply = await this.paintToken.totalSupply();
+            
             assert.isTrue(web3.utils.toBN(endSupply).eq(web3.utils.toBN(expectedSupply)));
         });
     });
