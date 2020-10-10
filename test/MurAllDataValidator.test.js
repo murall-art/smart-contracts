@@ -21,89 +21,11 @@ contract('MurAllDataValidator', ([owner, user]) => {
     });
 
     describe('validate', async () => {
-        it('does not allow individual pixels out of max pixel resolution range (2073600)', async () => {
+        it('returns correct pixel count for individual pixels', async () => {
             // given
-
-            const pixelOutOfRange = '0x001FA40100000000000000000000000000000000000000000000000000000000';
-            const individualPixels = Array(1);
-            individualPixels[0] = pixelOutOfRange;
-            const pixelGroups = Array(0);
-            const pixelGroupIndexes = Array(0);
-            const metadata = Array(2);
-            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-
-            await expectRevert.unspecified(
-                this.contract.validate(individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                    from: user,
-                })
-            );
-        });
-
-        it('does not allow groups of pixels out of max number of pixel group (129600)', async () => {
-            // given
-            const pixel = '0xAABB1FA400000000000000000000000000000000000000000000000000000000';
-            const pixelGroupOutOfRange = '0xFD21000000000000000000000000000000000000000000000000000000000000';
-            const metadata = Array(2);
-            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-            const individualPixels = Array(0);
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixel;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupOutOfRange;
-
-            await expectRevert.unspecified(
-                this.contract.validate(individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                    from: user,
-                })
-            );
-        });
-
-        it('does not allow group index array with incorrect amount', async () => {
-            // given
-            const pixelGroup = web3.utils.toBN('0x26a4d3a4217ad135efa1f04d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab');
-            const pixelGroupIndex = web3.utils.toBN(
-                '0x3039303930393039303930393039303930393039303930393039303930393039'
-            );
-            const metadata = Array(2);
-            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-            const individualPixels = Array(0);
-            const pixelGroups = [
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-                pixelGroup,
-            ];
-
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndex;
-
-            await expectRevert(
-                this.contract.validate(individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                    from: user,
-                }),
-                'unexpected group index array length'
-            );
-        });
-
-        it('allows pixels and groups within boundaries and returns correct pixel count', async () => {
-            // given
-            const pixel = web3.utils.toBN('0x0012d6870012d6870012d6870012d6870012d6870012d6870012d6870012d687');
+            const pixel = web3.utils.toBN('0x000000000012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F');
+            const pixel2 = web3.utils.toBN('0x000000000012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F');
+            const pixel3 = web3.utils.toBN('0x000000000012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F');
             const pixelGroup = web3.utils.toBN('0x26a4d3a4217ad135efa1f04d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab');
             const pixelGroupIndex = web3.utils.toBN(
                 '0x3039303930393039303930393039303930393039303930393039303930393039'
@@ -112,20 +34,22 @@ contract('MurAllDataValidator', ([owner, user]) => {
             const metadata = Array(2);
             metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
             metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-            const pixelData = Array(1);
+            const pixelData = Array(3);
             pixelData[0] = pixel;
+            pixelData[1] = pixel2;
+            pixelData[2] = pixel3;
             const pixelGroups = Array(1);
             pixelGroups[0] = pixelGroup;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndex;
 
             const pixelCount = await this.contract.validate(pixelData, pixelGroups, pixelGroupIndexes, metadata);
-            assert.equal(pixelCount, 40);
+            assert.equal(pixelCount, 55);
         });
 
         it('returns pixel count minus transparent pixels from group when alpha is enabled', async () => {
             // given
-            const pixel = web3.utils.toBN('0x0012d6870012d6870012d6870012d6870012d6870012d6870012d6870012d687');
+            const pixel = web3.utils.toBN('0x0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F');
             const pixelGroup = web3.utils.toBN('0x00a4d3a4007ad100efa1004d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab');
             const pixelGroupIndex = web3.utils.toBN(
                 '0x3039303930393039303930393039303930393039303930393039303930393039'
@@ -147,7 +71,7 @@ contract('MurAllDataValidator', ([owner, user]) => {
 
         it('returns pixel count including all colours when alpha is disabled', async () => {
             // given
-            const pixel = web3.utils.toBN('0x0012d6870012d6870012d6870012d6870012d6870012d6870012d6870012d687');
+            const pixel = web3.utils.toBN('0x0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F');
             const pixelGroup = web3.utils.toBN('0x00a4d3a4007ad100efa1004d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab');
             const pixelGroupIndex = web3.utils.toBN(
                 '0x3039303930393039303930393039303930393039303930393039303930393039'

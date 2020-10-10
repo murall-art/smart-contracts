@@ -3,7 +3,7 @@ const { ZERO_ADDRESS } = constants;
 
 const PaintToken = artifacts.require('./PaintToken.sol');
 
-const INITIAL_SUPPLY = 21772800000;
+const INITIAL_SUPPLY = 22020096000;
 const DECIMALS = 18;
 
 contract('PaintToken', function ([owner, user]) {
