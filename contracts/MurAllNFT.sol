@@ -229,6 +229,27 @@ contract MurAllNFT is ERC721, Ownable {
         return artworks[id].colorIndex[0] >> CONVERSION_SHIFT_BYTES_RGB565;
     }
 
+    function getArtworkFillCompletionStatus(uint256 id)
+        public
+        view
+        returns (
+            uint256 lastIndividualPixelsIndex,
+            uint256 lastPixelGroupsIndex,
+            uint256 lastPixelGroupIndexesIndex
+        )
+    {
+        lastIndividualPixelsIndex = (FIRST_3_BYTES_MASK & artworks[id].completionData) >> CONVERSION_SHIFT_BYTES;
+        lastPixelGroupsIndex = (FIRST_3_BYTES_MASK & (artworks[id].completionData << 24)) >> CONVERSION_SHIFT_BYTES;
+        lastPixelGroupIndexesIndex =
+            (FIRST_3_BYTES_MASK & (artworks[id].completionData << 48)) >>
+            CONVERSION_SHIFT_BYTES;
+        return (lastIndividualPixelsIndex, lastPixelGroupsIndex, lastPixelGroupIndexesIndex);
+    }
+
+    function isArtworkFilled(uint256 id) public view returns (bool) {
+        return (ARTWORK_COMPLETE_BYTES_MASK & artworks[id].completionData) != 0;
+    }
+
     function getArtist(uint256 id) public view returns (address) {
         return artworks[id].artist;
     }

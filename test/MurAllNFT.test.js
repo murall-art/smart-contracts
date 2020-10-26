@@ -715,5 +715,104 @@ contract('MurAllNFT', (accounts) => {
             // returns expected artist address
             assert.equal(returnedArtist, accounts[1]);
         });
+
+        it('getArtworkFillCompletionStatus returns correct completion status for minted token', async () => {
+            // Given minted token
+            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
+            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
+            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
+            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
+
+            const colourIndex = Array(1);
+            colourIndex[0] = colourIndexValue;
+            const individualPixels = Array(1);
+            individualPixels[0] = individualPixelsValue;
+            const pixelGroups = Array(1);
+            pixelGroups[0] = pixelGroupsValue;
+            const pixelGroupIndexes = Array(1);
+            pixelGroupIndexes[0] = pixelGroupIndexesValue;
+            const name = 1234;
+            const number = 5678;
+
+            const metadata = Array(2);
+            metadata[0] = name;
+            metadata[1] = number;
+
+            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
+                from: accounts[0],
+            });
+
+            const tokenId = 0;
+
+            // when
+            const returnedCompletionStatus = await contract.getArtworkFillCompletionStatus(tokenId);
+
+            // returns
+            assert.isTrue(web3.utils.toBN(returnedCompletionStatus.lastIndividualPixelsIndex).eq(web3.utils.toBN(0)));
+            assert.isTrue(web3.utils.toBN(returnedCompletionStatus.lastPixelGroupsIndex).eq(web3.utils.toBN(0)));
+            assert.isTrue(web3.utils.toBN(returnedCompletionStatus.lastPixelGroupIndexesIndex).eq(web3.utils.toBN(0)));
+        });
+
+        it('isArtworkFilled returns false when artwork is not filled', async () => {
+            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
+            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
+            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
+            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
+
+            const colourIndex = Array(1);
+            colourIndex[0] = colourIndexValue;
+            const individualPixels = Array(1);
+            individualPixels[0] = individualPixelsValue;
+            const pixelGroups = Array(1);
+            pixelGroups[0] = pixelGroupsValue;
+            const pixelGroupIndexes = Array(1);
+            pixelGroupIndexes[0] = pixelGroupIndexesValue;
+            const metadata = Array(2);
+            metadata[0] = 1234;
+            metadata[1] = 5678;
+
+            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
+                from: accounts[0],
+            });
+
+            const firstTokenId = 0;
+
+            const filled = await contract.isArtworkFilled(firstTokenId);
+
+            assert.isFalse(filled);
+        });
+
+        it('isArtworkFilled returns true when artwork is filled', async () => {
+            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
+            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
+            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
+            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
+
+            const colourIndex = Array(1);
+            colourIndex[0] = colourIndexValue;
+            const individualPixels = Array(1);
+            individualPixels[0] = individualPixelsValue;
+            const pixelGroups = Array(1);
+            pixelGroups[0] = pixelGroupsValue;
+            const pixelGroupIndexes = Array(1);
+            pixelGroupIndexes[0] = pixelGroupIndexesValue;
+            const metadata = Array(2);
+            metadata[0] = 1234;
+            metadata[1] = 5678;
+
+            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
+                from: accounts[0],
+            });
+
+            const firstTokenId = 0;
+
+            const receipt = await contract.fillData(firstTokenId, individualPixels, pixelGroups, pixelGroupIndexes, {
+                from: accounts[1],
+            });
+
+            const filled = await contract.isArtworkFilled(firstTokenId);
+
+            assert.isTrue(filled);
+        });
     });
 });
