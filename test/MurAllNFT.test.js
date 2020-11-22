@@ -358,7 +358,7 @@ contract('MurAllNFT', (accounts) => {
             );
         });
 
-        it('fails when address not ownder of NFT', async () => {
+        it('fails when address not owner of NFT', async () => {
             const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
             const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
             const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
