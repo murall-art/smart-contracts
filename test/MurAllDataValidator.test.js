@@ -42,8 +42,15 @@ contract('MurAllDataValidator', ([owner, user]) => {
             pixelGroups[0] = pixelGroup;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndex;
+            const transparencyHint = [0];
 
-            const pixelCount = await this.contract.validate(pixelData, pixelGroups, pixelGroupIndexes, metadata);
+            const pixelCount = await this.contract.validate(
+                pixelData,
+                pixelGroups,
+                pixelGroupIndexes,
+                metadata,
+                transparencyHint
+            );
             assert.equal(pixelCount, 55);
         });
 
@@ -64,8 +71,15 @@ contract('MurAllDataValidator', ([owner, user]) => {
             pixelGroups[0] = pixelGroup;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndex;
+            const transparencyHint = [0];
 
-            const pixelCount = await this.contract.validate(pixelData, pixelGroups, pixelGroupIndexes, metadata);
+            const pixelCount = await this.contract.validate(
+                pixelData,
+                pixelGroups,
+                pixelGroupIndexes,
+                metadata,
+                transparencyHint
+            );
             assert.equal(pixelCount, 36);
         });
 
@@ -86,9 +100,45 @@ contract('MurAllDataValidator', ([owner, user]) => {
             pixelGroups[0] = pixelGroup;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndex;
+            const transparencyHint = [0];
 
-            const pixelCount = await this.contract.validate(pixelData, pixelGroups, pixelGroupIndexes, metadata);
+            const pixelCount = await this.contract.validate(
+                pixelData,
+                pixelGroups,
+                pixelGroupIndexes,
+                metadata,
+                transparencyHint
+            );
             assert.equal(pixelCount, 40);
         });
+
+         it('does not check indexes outside of whats passed in transparency hint', async () => {
+             // given
+             const pixel = web3.utils.toBN('0x0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F');
+             const pixelGroup = web3.utils.toBN('0x00a4d3a4007ad100efa1004d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab');
+             const pixelGroupIndex = web3.utils.toBN(
+                 '0x3039303930393039303930393039303930393039303930393039303930393039'
+             );
+
+             const metadata = Array(2);
+             metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
+             metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
+             const pixelData = Array(1);
+             pixelData[0] = pixel;
+             const pixelGroups = Array(1);
+             pixelGroups[0] = pixelGroup;
+             const pixelGroupIndexes = Array(1);
+             pixelGroupIndexes[0] = pixelGroupIndex;
+             const transparencyHint = [];
+
+             const pixelCount = await this.contract.validate(
+                 pixelData,
+                 pixelGroups,
+                 pixelGroupIndexes,
+                 metadata,
+                 transparencyHint
+             );
+             assert.equal(pixelCount, 40);
+         });
     });
 });
