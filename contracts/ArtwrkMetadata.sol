@@ -5,11 +5,111 @@ import {MurAllNFT} from "./MurAllNFT.sol";
 
 contract ArtwrkMetadata is Ownable {
     string public constant INVALID_TOKEN_ID = "Invalid Token ID";
+    /**
+     * @notice The base URI for MurAll ARTWRK's off-chain metadata
+     */
+    string internal tokenUriBase;
+
+    /**
+     * @notice Base URI for MurAll ARTWRK's off-chain image
+     */
+    string private mediaUriBase;
+
+    /**
+     * @notice Base URI to view MurAll ARTWRK's on the MurAll website
+     */
+    string private viewUriBase;
 
     MurAllNFT public murAllNFT;
 
     constructor(MurAllNFT _murAllNFTAddr) public {
         murAllNFT = _murAllNFTAddr;
+    }
+
+    /**
+     * @notice Event emitted when TokenURI base changes
+     * @param tokenUriBase the base URI for tokenURI calls
+     */
+    event TokenUriBaseSet(string tokenUriBase);
+
+    /**
+     * @notice Event emitted when the `mediaUriBase` is set.
+     * Only emitted when the `mediaUriBase` is set after contract deployment.
+     * @param mediaUriBase the new URI
+     */
+    event MediaUriBaseSet(string mediaUriBase);
+
+    /**
+     * @notice Event emitted when the `viewUriBase` is set.
+     * Only emitted when the `viewUriBase` is set after contract deployment.
+     * @param viewUriBase the new URI
+     */
+    event ViewUriBaseSet(string viewUriBase);
+
+    function setTokenUriBase(string calldata _tokenUriBase) external onlyOwner {
+        // Set the base for metadata tokenURI
+        tokenUriBase = _tokenUriBase;
+
+        // Emit the event
+        emit TokenUriBaseSet(_tokenUriBase);
+    }
+
+    /**
+     * @notice Set the base URI for the image of each MurAll ARTWRK.
+     * Only invokable by contract owner.
+     * If successful, emits an `MediaUriBaseSet` event.
+     * @param _mediaUriBase base for the mediaURI shown in metadata for each MurAll ARTWRK
+     */
+    function setMediaUriBase(string calldata _mediaUriBase) external onlyOwner {
+        // Set the base for metadata tokenURI
+        mediaUriBase = _mediaUriBase;
+
+        // Emit the event
+        emit MediaUriBaseSet(_mediaUriBase);
+    }
+
+    /**
+     * @notice Set the base URI for the image of each MurAll ARTWRK.
+     * Only invokable by contract owner.
+     * If successful, emits an `MediaUriBaseSet` event.
+     * @param _viewUriBase base URI for viewing an MurAll ARTWRK on the MurAll website
+     */
+    function setViewUriBase(string calldata _viewUriBase) external onlyOwner {
+        // Set the base for metadata tokenURI
+        viewUriBase = _viewUriBase;
+
+        // Emit the event
+        emit ViewUriBaseSet(_viewUriBase);
+    }
+
+    /**
+     * @notice Get view URI for a given MurAll ARTWRK's Token ID.
+     * @param _tokenId the Token ID of a previously minted MurAll ARTWRK
+     * @return uri the off-chain URI to view the Avastar on the MurAll website
+     */
+    function viewURI(uint256 _tokenId) public view returns (string memory uri) {
+        require(_tokenId < murAllNFT.totalSupply(), INVALID_TOKEN_ID);
+        uri = strConcat(viewUriBase, uintToStr(_tokenId));
+    }
+
+    /**
+     * @notice Get media URI for a given MurAll ARTWRK's Token ID.
+     * @param _tokenId the Token ID of a previously minted MurAll ARTWRK's
+     * @return uri the off-chain URI to the MurAll ARTWRK's image
+     */
+    function mediaURI(uint256 _tokenId) public view returns (string memory uri) {
+        require(_tokenId < murAllNFT.totalSupply(), INVALID_TOKEN_ID);
+        uri = strConcat(mediaUriBase, uintToStr(_tokenId));
+    }
+
+    /**
+     * @notice Get token URI for a given MurAll ARTWRK's Token ID.
+     * @param _tokenId the Token ID of a previously minted MurAll ARTWRK
+     * @return uri the MurAll ARTWRK's off-chain JSON metadata URI
+     */
+    function tokenURI(uint256 _tokenId) external view returns (string memory uri) {
+        require(_tokenId < murAllNFT.totalSupply(), INVALID_TOKEN_ID);
+        uri = strConcat(tokenUriBase, uintToStr(_tokenId));
     }
 
     /**
@@ -48,14 +148,14 @@ contract ArtwrkMetadata is Ownable {
         metadata = strConcat(metadata, '",\n');
 
         // View URI
-        // metadata = strConcat(metadata, '  "external_url": "');
-        // metadata = strConcat(metadata, viewURI(_tokenId));
-        // metadata = strConcat(metadata, '",\n');
+        metadata = strConcat(metadata, '  "external_url": "');
+        metadata = strConcat(metadata, viewURI(_tokenId));
+        metadata = strConcat(metadata, '",\n');
 
         // Media URI
-        // metadata = strConcat(metadata, '  "image": "');
-        // metadata = strConcat(metadata, mediaURI(_tokenId));
-        // metadata = strConcat(metadata, '",\n');
+        metadata = strConcat(metadata, '  "image": "');
+        metadata = strConcat(metadata, mediaURI(_tokenId));
+        metadata = strConcat(metadata, '",\n');
 
         // Attributes (ala OpenSea)
         metadata = strConcat(metadata, '  "attributes": [\n');

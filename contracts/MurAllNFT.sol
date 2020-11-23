@@ -37,7 +37,7 @@ contract MurAllNFT is ERC721, Ownable {
     );
 
     /* TODO Name TBC: I was thinking something to signify its a small piece, like a snippet of art */
-    constructor() public ERC721("MurAll NFT", "ARTWRK") {}
+    constructor() public ERC721("MurAll", "ARTWRK") {}
 
     function mint(
         address origin,

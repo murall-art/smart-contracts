@@ -37,22 +37,30 @@ contract MurAll is ReentrancyGuard {
     );
 
     /**
-     * @param colorIndex           - Color index defining the 256 colors the pixels reference at display time (RGB565 format, 2 bytes per color)
-     * @param individualPixels     - Individual pixel references to the color index (1 byte) twinned with respective group position (2 bytes) and place within the group (1 byte) - 8 pixels per uint256
-     * @param pixelGroups          - RGB pixels in groups of 32 (1 pixel reference every 1 byte)
-     * @param pixelGroupIndexes    - Group indexes matching the groups (1 index for every 2 bytes, 16 indexes per 32 byte entry)
-     * @param metadata             - Array of 2 metadata items in order: name (32 byte string converted to uint256), other metadata (formatted byte array consiting of number, seriesId, and alpha channel flag which takes the first colour as alpha)
+     * @param colorIndex                - Color index defining the 256 colors the pixels reference at display time (RGB565 format, 2 bytes per color)
+     * @param individualPixels          - Individual pixel references to the color index (1 byte) twinned with respective group position (2 bytes) and place within the group (1 byte) - 8 pixels per uint256
+     * @param pixelGroups               - RGB pixels in groups of 32 (1 pixel reference every 1 byte)
+     * @param pixelGroupIndexes         - Group indexes matching the groups (1 index for every 2 bytes, 16 indexes per 32 byte entry)
+     * @param metadata                  - Array of 2 metadata items in order: name (32 byte string converted to uint256), other metadata (formatted byte array consiting of number, seriesId, and alpha channel flag which takes the first colour as alpha)
+     * @param pixelGroupTransparencyHint- Array of group indexes to check for transparency for the transparent pixel deduction process
      */
     function setPixels(
         uint256[] memory colorIndex,
         uint256[] memory individualPixels,
         uint256[] memory pixelGroups,
         uint256[] memory pixelGroupIndexes,
-        uint256[2] memory metadata
+        uint256[2] memory metadata,
+        uint256[] memory pixelGroupTransparencyHint
     ) public nonReentrant {
         require(colorIndex.length <= 16, "colour index too large"); // max 256 colors in groups of 16 (16 groups of 16 colors = 256 colors)
 
-        uint256 pixelCount = dataValidator.validate(individualPixels, pixelGroups, pixelGroupIndexes, metadata);
+        uint256 pixelCount = dataValidator.validate(
+            individualPixels,
+            pixelGroups,
+            pixelGroupIndexes,
+            metadata,
+            pixelGroupTransparencyHint
+        );
         require(pixelCount > 0, "No pixels to draw");
 
         paintToken.burnFrom(msg.sender, PRICE_PER_PIXEL * pixelCount);
