@@ -20,15 +20,19 @@ contract MurAllNFT is ERC721, Ownable {
     struct ArtWork {
         bytes32 dataHash;
         address artist;
+        uint256 name;
+        uint256 metadata;
+    }
+
+    struct ArtWorkImageData {
         uint256[] colorIndex;
         uint256[] individualPixels;
         uint256[] pixelGroups;
         uint256[] pixelGroupIndexes;
         uint256 completionData;
-        uint256 name;
-        uint256 metadata;
     }
 
+    mapping(bytes32 => ArtWorkImageData) private artworkImageDatas;
     ArtWork[] artworks;
 
     /**
@@ -81,17 +85,7 @@ contract MurAllNFT is ERC721, Ownable {
         bytes32 dataHash = keccak256(abi.encodePacked(colorIndex, individualPixels, pixelGroups, pixelGroupIndexes));
 
         // create the artwork object
-        ArtWork memory _artwork = ArtWork(
-            dataHash,
-            origin,
-            new uint256[](colorIndex.length),
-            new uint256[](individualPixels.length),
-            new uint256[](pixelGroups.length),
-            new uint256[](pixelGroupIndexes.length),
-            0,
-            metadata[0],
-            metadata[1]
-        );
+        ArtWork memory _artwork = ArtWork(dataHash, origin, metadata[0], metadata[1]);
 
         // push the artwork to the array
         artworks.push(_artwork);
@@ -109,23 +103,36 @@ contract MurAllNFT is ERC721, Ownable {
         uint256[] memory pixelGroups,
         uint256[] memory pixelGroupIndexes
     ) public onlyExistingTokens(id) {
-        ArtWork storage _artwork = artworks[id];
+        ArtWork memory _artwork = artworks[id];
         require(_isApprovedOrOwner(msg.sender, id), "Not approved or not owner of token");
 
-        require((ARTWORK_COMPLETE_BYTES_MASK & _artwork.completionData) == 0, "Artwork already filled");
-
         bytes32 dataHash = keccak256(abi.encodePacked(colorIndex, individualPixels, pixelGroups, pixelGroupIndexes));
+        require(_artwork.dataHash == dataHash, "Incorrect data");
+
+        if (artworkImageDatas[dataHash].completionData == 0) {
+            artworkImageDatas[dataHash] = ArtWorkImageData(
+                new uint256[](colorIndex.length),
+                new uint256[](individualPixels.length),
+                new uint256[](pixelGroups.length),
+                new uint256[](pixelGroupIndexes.length),
+                0
+            );
+        }
+
+        ArtWorkImageData storage _artworkImageData = artworkImageDatas[dataHash];
+
+        require((ARTWORK_COMPLETE_BYTES_MASK & _artworkImageData.completionData) == 0, "Artwork already filled");
 
         uint256 len;
         uint256 index;
-        uint256 lastIndividualPixelsIndex = (FIRST_3_BYTES_MASK & _artwork.completionData) >> CONVERSION_SHIFT_BYTES;
-        uint256 lastPixelGroupsIndex = (FIRST_3_BYTES_MASK & (_artwork.completionData << 24)) >> CONVERSION_SHIFT_BYTES;
-        uint256 lastPixelGroupIndexesIndex = (FIRST_3_BYTES_MASK & (_artwork.completionData << 48)) >>
+        uint256 lastIndividualPixelsIndex = (FIRST_3_BYTES_MASK & _artworkImageData.completionData) >>
             CONVERSION_SHIFT_BYTES;
-        uint256 lastColourIndexGroupIndex = (FIRST_3_BYTES_MASK & (_artwork.completionData << 72)) >>
+        uint256 lastPixelGroupsIndex = (FIRST_3_BYTES_MASK & (_artworkImageData.completionData << 24)) >>
             CONVERSION_SHIFT_BYTES;
-
-        require(_artwork.dataHash == dataHash, "Incorrect data");
+        uint256 lastPixelGroupIndexesIndex = (FIRST_3_BYTES_MASK & (_artworkImageData.completionData << 48)) >>
+            CONVERSION_SHIFT_BYTES;
+        uint256 lastColourIndexGroupIndex = (FIRST_3_BYTES_MASK & (_artworkImageData.completionData << 72)) >>
+            CONVERSION_SHIFT_BYTES;
 
         // fill individual pixels
         if (gasleft() > FILL_DATA_GAS_RESERVE && individualPixels.length > 0) {
@@ -134,7 +141,7 @@ contract MurAllNFT is ERC721, Ownable {
             len = individualPixels.length;
 
             while ((gasleft() > FILL_DATA_GAS_RESERVE) && index < len) {
-                _artwork.individualPixels[index] = individualPixels[index];
+                _artworkImageData.individualPixels[index] = individualPixels[index];
                 lastIndividualPixelsIndex = index;
                 index++;
             }
@@ -147,7 +154,7 @@ contract MurAllNFT is ERC721, Ownable {
             len = pixelGroups.length;
 
             while ((gasleft() > FILL_DATA_GAS_RESERVE) && index < len) {
-                _artwork.pixelGroups[index] = pixelGroups[index];
+                _artworkImageData.pixelGroups[index] = pixelGroups[index];
                 lastPixelGroupsIndex = index;
                 index++;
             }
@@ -160,7 +167,7 @@ contract MurAllNFT is ERC721, Ownable {
             len = pixelGroupIndexes.length;
 
             while ((gasleft() > FILL_DATA_GAS_RESERVE) && index < len) {
-                _artwork.pixelGroupIndexes[index] = pixelGroupIndexes[index];
+                _artworkImageData.pixelGroupIndexes[index] = pixelGroupIndexes[index];
                 lastPixelGroupIndexesIndex = index;
                 index++;
             }
@@ -172,7 +179,7 @@ contract MurAllNFT is ERC721, Ownable {
             len = colorIndex.length;
 
             while ((gasleft() > FILL_DATA_GAS_RESERVE) && index < len) {
-                _artwork.colorIndex[index] = colorIndex[index];
+                _artworkImageData.colorIndex[index] = colorIndex[index];
                 lastColourIndexGroupIndex = index;
                 index++;
             }
@@ -191,7 +198,7 @@ contract MurAllNFT is ERC721, Ownable {
         }
 
         // update completion data with last indexes and completion state
-        _artwork.completionData =
+        _artworkImageData.completionData =
             (lastIndividualPixelsIndex << CONVERSION_SHIFT_BYTES) |
             (lastPixelGroupsIndex << (CONVERSION_SHIFT_BYTES - 24)) |
             (lastPixelGroupIndexesIndex << (CONVERSION_SHIFT_BYTES - 48)) |
@@ -224,12 +231,12 @@ contract MurAllNFT is ERC721, Ownable {
         )
     {
         ArtWork memory _artwork = artworks[id];
-
+        ArtWorkImageData memory _artworkImageData = artworkImageDatas[_artwork.dataHash];
         return (
-            _artwork.colorIndex,
-            _artwork.individualPixels,
-            _artwork.pixelGroups,
-            _artwork.pixelGroupIndexes,
+            _artworkImageData.colorIndex,
+            _artworkImageData.individualPixels,
+            _artworkImageData.pixelGroups,
+            _artworkImageData.pixelGroupIndexes,
             _artwork.artist,
             _artwork.name,
             _artwork.metadata
@@ -248,8 +255,13 @@ contract MurAllNFT is ERC721, Ownable {
             uint256[] memory pixelGroupIndexes
         )
     {
-        ArtWork memory _artwork = artworks[id];
-        return (_artwork.colorIndex, _artwork.individualPixels, _artwork.pixelGroups, _artwork.pixelGroupIndexes);
+        ArtWorkImageData memory _artworkImageData = artworkImageDatas[artworks[id].dataHash];
+        return (
+            _artworkImageData.colorIndex,
+            _artworkImageData.individualPixels,
+            _artworkImageData.pixelGroups,
+            _artworkImageData.pixelGroupIndexes
+        );
     }
 
     function getArtworkDataHashForId(uint256 id) public view onlyExistingTokens(id) returns (bytes32) {
@@ -275,7 +287,7 @@ contract MurAllNFT is ERC721, Ownable {
     function getAlphaChannel(uint256 id) public view onlyExistingTokens(id) onlyFilledTokens(id) returns (uint256) {
         require(hasAlphaChannel(id), "Artwork has no alpha");
         // alpha is the first color in the color index
-        return artworks[id].colorIndex[0] >> CONVERSION_SHIFT_BYTES_RGB565;
+        return artworkImageDatas[artworks[id].dataHash].colorIndex[0] >> CONVERSION_SHIFT_BYTES_RGB565;
     }
 
     function getArtworkFillCompletionStatus(uint256 id)
@@ -289,19 +301,22 @@ contract MurAllNFT is ERC721, Ownable {
             uint256 lastColourIndexGroupIndex
         )
     {
-        lastIndividualPixelsIndex = (FIRST_3_BYTES_MASK & artworks[id].completionData) >> CONVERSION_SHIFT_BYTES;
-        lastPixelGroupsIndex = (FIRST_3_BYTES_MASK & (artworks[id].completionData << 24)) >> CONVERSION_SHIFT_BYTES;
+        ArtWorkImageData memory _artworkImageData = artworkImageDatas[artworks[id].dataHash];
+        lastIndividualPixelsIndex = (FIRST_3_BYTES_MASK & _artworkImageData.completionData) >> CONVERSION_SHIFT_BYTES;
+        lastPixelGroupsIndex =
+            (FIRST_3_BYTES_MASK & (_artworkImageData.completionData << 24)) >>
+            CONVERSION_SHIFT_BYTES;
         lastPixelGroupIndexesIndex =
-            (FIRST_3_BYTES_MASK & (artworks[id].completionData << 48)) >>
+            (FIRST_3_BYTES_MASK & (_artworkImageData.completionData << 48)) >>
             CONVERSION_SHIFT_BYTES;
         lastColourIndexGroupIndex =
-            (FIRST_3_BYTES_MASK & (artworks[id].completionData << 72)) >>
+            (FIRST_3_BYTES_MASK & (_artworkImageData.completionData << 72)) >>
             CONVERSION_SHIFT_BYTES;
         return (lastIndividualPixelsIndex, lastPixelGroupsIndex, lastPixelGroupIndexesIndex, lastColourIndexGroupIndex);
     }
 
     function isArtworkFilled(uint256 id) public view onlyExistingTokens(id) returns (bool) {
-        return (ARTWORK_COMPLETE_BYTES_MASK & artworks[id].completionData) != 0;
+        return (ARTWORK_COMPLETE_BYTES_MASK & artworkImageDatas[artworks[id].dataHash].completionData) != 0;
     }
 
     function getArtist(uint256 id) public view onlyExistingTokens(id) returns (address) {
