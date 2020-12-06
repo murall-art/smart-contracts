@@ -214,7 +214,7 @@ contract('MurAll', ([owner, user]) => {
             const individualPixelsValue = '0x0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F';
             const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
             const pixelGroupIndexesValue = '0x3039303930393039303930393039303930393039303930393039303930393039';
-            const expectedHashOfData = '0x0bdd196386bbbe2dc1cd497aec944178f12600c8015e10ad11e9a40e8ad710eb';
+            const expectedHashOfData = '0xd5d15bc90e5672d94ac8846b8c1b939303817c6a04030964855fbc831ca31a5e';
 
             const colourIndexes = Array(1);
             colourIndexes[0] = colourIndexValue;
