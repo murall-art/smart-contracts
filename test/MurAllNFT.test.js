@@ -41,7 +41,7 @@ contract('MurAllNFT', (accounts) => {
     let contract;
 
     beforeEach(async () => {
-        contract = await MurAllNFT.new({ from: accounts[0] });
+        contract = await MurAllNFT.new([accounts[0]], { from: accounts[0] });
     });
 
     describe('Deployment', async () => {
@@ -612,7 +612,7 @@ contract('MurAllNFT', (accounts) => {
                 contract.setTokenUriBase(uri, {
                     from: accounts[1],
                 }),
-                'caller is not the owner'
+                'Does not have admin role'
             );
         });
 
@@ -623,7 +623,7 @@ contract('MurAllNFT', (accounts) => {
                 contract.setMediaUriBase(uri, {
                     from: accounts[1],
                 }),
-                'caller is not the owner'
+                'Does not have admin role'
             );
         });
 
@@ -634,7 +634,7 @@ contract('MurAllNFT', (accounts) => {
                 contract.setViewUriBase(uri, {
                     from: accounts[1],
                 }),
-                'caller is not the owner'
+                'Does not have admin role'
             );
         });
 

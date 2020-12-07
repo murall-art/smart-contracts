@@ -60,7 +60,7 @@ contract('MurAllMarketplace', ([owner, user]) => {
         this.murAllBlockList = await MurAllBlockList.new({ from: owner });
         this.contract = await MurAllMarketplace.new(this.murAllBlockList.address, { from: owner });
         this.paintToken = await PaintToken.new({ from: owner });
-        this.murAllNFT = await MurAllNFT.new({ from: owner });
+        this.murAllNFT = await MurAllNFT.new([owner], { from: owner });
         // await this.murAllBlockList.transferOwnership(this.contract.address, { from: owner });
     });
 

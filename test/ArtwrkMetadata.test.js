@@ -56,7 +56,7 @@ contract('ArtwrkMetadata', ([owner, user]) => {
     };
 
     beforeEach(async () => {
-        this.murAllNFT = await MurAllNFT.new({ from: owner });
+        this.murAllNFT = await MurAllNFT.new([owner], { from: owner });
 
         this.contract = await ArtwrkMetadata.new(this.murAllNFT.address, { from: owner });
     });

@@ -3,9 +3,12 @@ pragma solidity ^0.6.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract MurAllNFT is ERC721, Ownable {
+contract MurAllNFT is ERC721, Ownable, AccessControl {
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     using Strings for uint256;
+
     string public constant INVALID_TOKEN_ID = "Invalid Token ID";
     uint256 constant FILL_DATA_GAS_RESERVE = 26000;
     // 0xFFFFFF0000000000000000000000000000000000000000000000000000000000
@@ -61,6 +64,13 @@ contract MurAllNFT is ERC721, Ownable {
         _;
     }
 
+    /** @dev Checks if sender address has admin role
+     */
+    modifier onlyAdmin() {
+        require(hasRole(ADMIN_ROLE, msg.sender), "Does not have admin role");
+        _;
+    }
+
     event ArtworkFilled(
         uint256 indexed id,
         bool finished,
@@ -71,7 +81,11 @@ contract MurAllNFT is ERC721, Ownable {
     );
 
     /* TODO Name TBC: I was thinking something to signify its a small piece, like a snippet of art */
-    constructor() public ERC721("MurAll", "ARTWRK") {}
+    constructor(address[] memory admins) public ERC721("MurAll", "ARTWRK") {
+        for (uint256 i = 0; i < admins.length; ++i) {
+            _setupRole(ADMIN_ROLE, admins[i]);
+        }
+    }
 
     function mint(
         address origin,
@@ -325,30 +339,30 @@ contract MurAllNFT is ERC721, Ownable {
 
     /**
      * @notice Set the base URI for creating `tokenURI` for each MurAll ARTWRK.
-     * Only invokable by contract owner.
+     * Only invokable by admin role.
      * @param _tokenUriBase base for the ERC721 tokenURI
      */
-    function setTokenUriBase(string calldata _tokenUriBase) external onlyOwner {
+    function setTokenUriBase(string calldata _tokenUriBase) external onlyAdmin {
         // Set the base for metadata tokenURI
         _setBaseURI(_tokenUriBase);
     }
 
     /**
      * @notice Set the base URI for the image of each MurAll ARTWRK.
-     * Only invokable by contract owner.
+     * Only invokable by admin role.
      * @param _mediaUriBase base for the mediaURI shown in metadata for each MurAll ARTWRK
      */
-    function setMediaUriBase(string calldata _mediaUriBase) external onlyOwner {
+    function setMediaUriBase(string calldata _mediaUriBase) external onlyAdmin {
         // Set the base for metadata tokenURI
         mediaUriBase = _mediaUriBase;
     }
 
     /**
      * @notice Set the base URI for the viewing the MurAll ARTWRK on the MurAll website.
-     * Only invokable by contract owner.
+     * Only invokable by admin role.
      * @param _viewUriBase base URI for viewing an MurAll ARTWRK on the MurAll website
      */
-    function setViewUriBase(string calldata _viewUriBase) external onlyOwner {
+    function setViewUriBase(string calldata _viewUriBase) external onlyAdmin {
         // Set the base for metadata tokenURI
         viewUriBase = _viewUriBase;
     }

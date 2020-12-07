@@ -17,12 +17,18 @@ contract('MurAll', ([owner, user]) => {
     };
 
     beforeEach(async () => {
-        this.murAllNFT = await MurAllNFT.new({ from: owner });
+        this.murAllNFT = await MurAllNFT.new([owner], { from: owner });
         this.paintToken = await PaintToken.new({ from: owner });
         this.dataValidator = await DataValidator.new({ from: owner });
-        this.contract = await MurAll.new(this.paintToken.address, this.murAllNFT.address, this.dataValidator.address, {
-            from: owner,
-        });
+        this.contract = await MurAll.new(
+            this.paintToken.address,
+            this.murAllNFT.address,
+            this.dataValidator.address,
+            [owner],
+            {
+                from: owner,
+            }
+        );
         await this.murAllNFT.transferOwnership(this.contract.address, { from: owner });
     });
 
@@ -88,7 +94,7 @@ contract('MurAll', ([owner, user]) => {
                 pixelGroups,
                 pixelGroupIndexes,
                 metadata,
-                [],
+
                 {
                     from: user,
                 }
@@ -131,7 +137,7 @@ contract('MurAll', ([owner, user]) => {
             await setAllowance(40);
 
             await expectRevert(
-                this.contract.setPixels(colourIndexes, pixelData, pixelGroups, pixelGroupIndexes, metadata, [0], {
+                this.contract.setPixels(colourIndexes, pixelData, pixelGroups, pixelGroupIndexes, metadata, {
                     from: user,
                 }),
                 'No pixels to draw'
@@ -162,7 +168,7 @@ contract('MurAll', ([owner, user]) => {
             assert.isFalse(await this.contract.isArtist(user));
             assert.equal(await this.contract.totalArtists(), 0);
 
-            await this.contract.setPixels(colourIndexes, pixelData, pixelGroups, pixelGroupIndexes, metadata, [], {
+            await this.contract.setPixels(colourIndexes, pixelData, pixelGroups, pixelGroupIndexes, metadata, {
                 from: user,
             });
 
@@ -194,14 +200,14 @@ contract('MurAll', ([owner, user]) => {
             assert.isFalse(await this.contract.isArtist(user));
             assert.equal(await this.contract.totalArtists(), 0);
 
-            await this.contract.setPixels(colourIndexes, pixelData, pixelGroups, pixelGroupIndexes, metadata, [], {
+            await this.contract.setPixels(colourIndexes, pixelData, pixelGroups, pixelGroupIndexes, metadata, {
                 from: user,
             });
 
             assert.isTrue(await this.contract.isArtist(user));
             assert.equal(await this.contract.totalArtists(), 1);
 
-            await this.contract.setPixels(colourIndexes, pixelData, pixelGroups, pixelGroupIndexes, metadata, [], {
+            await this.contract.setPixels(colourIndexes, pixelData, pixelGroups, pixelGroupIndexes, metadata, {
                 from: user,
             });
 
@@ -237,7 +243,7 @@ contract('MurAll', ([owner, user]) => {
                 pixelGroups,
                 pixelGroupIndexes,
                 metadata,
-                [],
+
                 {
                     from: user,
                 }
@@ -265,7 +271,6 @@ contract('MurAll', ([owner, user]) => {
             const metadata = Array(2);
             metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
             metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000000';
-            const transparencyHint = [0, 1];
             const pixelCount = 40;
             await setAllowance(pixelCount);
 
@@ -273,17 +278,9 @@ contract('MurAll', ([owner, user]) => {
             const requiredTokens = web3.utils.toBN(PRICE_PER_PIXEL).mul(web3.utils.toBN(pixelCount));
             const expectedSupply = web3.utils.toBN(startSupply).sub(web3.utils.toBN(requiredTokens));
 
-            await this.contract.setPixels(
-                colourIndexes,
-                individualPixels,
-                pixelGroups,
-                pixelGroupIndexes,
-                metadata,
-                transparencyHint,
-                {
-                    from: user,
-                }
-            );
+            await this.contract.setPixels(colourIndexes, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
+                from: user,
+            });
 
             const endSupply = await this.paintToken.totalSupply();
 
@@ -296,6 +293,29 @@ contract('MurAll', ([owner, user]) => {
             const costPerPixel = await this.contract.getCostPerPixel();
 
             assert.isTrue(costPerPixel.eq(web3.utils.toBN(PRICE_PER_PIXEL)));
+        });
+    });
+    describe('Admin role', async () => {
+        it('allows setting new data validator from admin', async () => {
+            const dataValidator = await DataValidator.new({ from: owner });
+
+            const receipt = await this.contract.setDataValidator(dataValidator.address, {
+                from: owner,
+            });
+
+            await expectEvent(receipt, 'NewDataValidatorSet', {
+                dataValidator: dataValidator.address,
+            });
+        });
+        it('does not allow setting new data validator from non admin', async () => {
+            const dataValidator = await DataValidator.new({ from: owner });
+
+            await expectRevert(
+                this.contract.setDataValidator(dataValidator.address, {
+                    from: user,
+                }),
+                'Does not have admin role'
+            );
         });
     });
 });
