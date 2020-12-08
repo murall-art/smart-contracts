@@ -5,8 +5,10 @@ import {MurAllNFT} from "./MurAllNFT.sol";
 import {DataValidator} from "./validator/DataValidator.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract MurAll is ReentrancyGuard, AccessControl {
+    using SafeMath for uint256;
     // Create a new role identifier for the minter role
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     uint256 constant PRICE_PER_PIXEL = 500000000000000000;
@@ -70,10 +72,10 @@ contract MurAll is ReentrancyGuard, AccessControl {
         require(colorIndex.length <= 16, "colour index too large"); // max 256 colors in groups of 16 (16 groups of 16 colors = 256 colors)
 
         uint256 pixelCount = dataValidator.validateSinglePixelData(individualPixels);
-        pixelCount += dataValidator.validatePixelGroupData(pixelGroups, pixelGroupIndexes, metadata);
+        pixelCount = pixelCount.add(dataValidator.validatePixelGroupData(pixelGroups, pixelGroupIndexes, metadata));
         require(pixelCount > 0, "No pixels to draw");
 
-        paintToken.burnFrom(msg.sender, PRICE_PER_PIXEL * pixelCount);
+        paintToken.burnFrom(msg.sender, PRICE_PER_PIXEL.mul(pixelCount));
 
         uint256 tokenId = murAllNFT.mint(
             msg.sender,

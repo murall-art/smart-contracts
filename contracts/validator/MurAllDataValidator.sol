@@ -63,7 +63,7 @@ contract MurAllDataValidator is DataValidator {
     ) public override pure onlyValidGroupData(pixelGroups, pixelGroupIndexes) returns (uint256 numberOfPixels) {
         uint256 len = pixelGroups.length;
 
-        numberOfPixels = (len * NUMBER_PER_GROUP); // 32 pixels per group
+        numberOfPixels = len.mul(NUMBER_PER_GROUP); // 32 pixels per group
 
         if (hasAlphaChannel(metadata[1])) {
             uint256 currentGroup;
