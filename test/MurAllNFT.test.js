@@ -5,10 +5,43 @@ const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 const MurAllNFT = artifacts.require('./MurAllNFT.sol');
 
 contract('MurAllNFT', (accounts) => {
+    const mintTestToken = async (fromAddress, fill = false) => {
+        // Given minted token
+        const colourIndexValue = '0x10E1CCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
+        const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
+        const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
+        const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
+
+        const colourIndex = Array(1);
+        colourIndex[0] = colourIndexValue;
+        const individualPixels = Array(1);
+        individualPixels[0] = individualPixelsValue;
+        const pixelGroups = Array(1);
+        pixelGroups[0] = pixelGroupsValue;
+        const pixelGroupIndexes = Array(1);
+        pixelGroupIndexes[0] = pixelGroupIndexesValue;
+        const name = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
+        const otherInfo = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
+
+        const metadata = Array(2);
+        metadata[0] = name;
+        metadata[1] = otherInfo;
+
+        await contract.mint(fromAddress, colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
+            from: accounts[0],
+        });
+
+        if (fill) {
+            await contract.fillData(0, colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, {
+                from: fromAddress,
+            });
+        }
+    };
+
     let contract;
 
     beforeEach(async () => {
-        contract = await MurAllNFT.new({ from: accounts[0] });
+        contract = await MurAllNFT.new([accounts[0]], { from: accounts[0] });
     });
 
     describe('Deployment', async () => {
@@ -51,27 +84,9 @@ contract('MurAllNFT', (accounts) => {
         });
 
         it('mints a new token from contract owner', async () => {
-            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
-            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
-            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
-            const expectedHashOfData = '0x8a51668637b536f71338ddad3fc694db601f971ea2b1f6ef485269cc4fce8220';
-            const colourIndex = Array(1);
-            colourIndex[0] = colourIndexValue;
-            const individualPixels = Array(1);
-            individualPixels[0] = individualPixelsValue;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroupsValue;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndexesValue;
+            await mintTestToken(accounts[1]);
             const firstTokenId = 0;
-            const metadata = Array(2);
-            metadata[0] = 1234;
-            metadata[1] = 5678;
-
-            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                from: accounts[0],
-            });
+            const expectedHashOfData = '0x87d3d8af8b2b434f766054af0aec4ff9be79db48a6a34f1d2a3f10d5436fe854';
 
             assert.equal(await contract.totalSupply(), 1);
             assert.equal(await contract.ownerOf(firstTokenId), accounts[1]);
@@ -82,27 +97,8 @@ contract('MurAllNFT', (accounts) => {
     describe('Get data hash ', async () => {
         it('returns correct data hash for minted token', async () => {
             // Given minted token
-            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
-            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
-            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
-            const expectedHashOfData = '0x8a51668637b536f71338ddad3fc694db601f971ea2b1f6ef485269cc4fce8220';
-            const colourIndex = Array(1);
-            colourIndex[0] = colourIndexValue;
-            const individualPixels = Array(1);
-            individualPixels[0] = individualPixelsValue;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroupsValue;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndexesValue;
-            const metadata = Array(2);
-            metadata[0] = 1234;
-            metadata[1] = 5678;
-
-            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                from: accounts[0],
-            });
-
+            await mintTestToken(accounts[1]);
+            const expectedHashOfData = '0x87d3d8af8b2b434f766054af0aec4ff9be79db48a6a34f1d2a3f10d5436fe854';
             const tokenId = 0;
 
             // when getArtworkDataHashForId
@@ -116,30 +112,11 @@ contract('MurAllNFT', (accounts) => {
     describe('Get NFT artwork', async () => {
         it('reverts if artwork of minted token is not filled in NFT', async () => {
             // Given minted token
-            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
-            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
-            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
-
-            const colourIndex = Array(1);
-            colourIndex[0] = colourIndexValue;
-            const individualPixels = Array(1);
-            individualPixels[0] = individualPixelsValue;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroupsValue;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndexesValue;
-            const metadata = Array(2);
-            metadata[0] = 1234;
-            metadata[1] = 5678;
-
-            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                from: accounts[0],
-            });
+            await mintTestToken(accounts[1]);
 
             const tokenId = 0;
 
-            await expectRevert(contract.getArtworkForId(tokenId), 'Artwork is unfinished');
+            await expectRevert(contract.getArtworkForId(tokenId), 'Artwork is not filled');
         });
 
         it('returns correct artwork when NFT is filled', async () => {
@@ -165,9 +142,16 @@ contract('MurAllNFT', (accounts) => {
             });
 
             const tokenId = 0;
-            const receipt = await contract.fillData(tokenId, individualPixels, pixelGroups, pixelGroupIndexes, {
-                from: accounts[1],
-            });
+            const receipt = await contract.fillData(
+                tokenId,
+                colourIndex,
+                individualPixels,
+                pixelGroups,
+                pixelGroupIndexes,
+                {
+                    from: accounts[1],
+                }
+            );
 
             const data = await contract.getArtworkForId(tokenId);
             assert.equal(data.colorIndex.length, 1);
@@ -184,30 +168,11 @@ contract('MurAllNFT', (accounts) => {
     describe('Get full NFT data', async () => {
         it('reverts if artwork of minted token is not filled in NFT', async () => {
             // Given minted token
-            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
-            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
-            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
-
-            const colourIndex = Array(1);
-            colourIndex[0] = colourIndexValue;
-            const individualPixels = Array(1);
-            individualPixels[0] = individualPixelsValue;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroupsValue;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndexesValue;
-            const metadata = Array(2);
-            metadata[0] = 1234;
-            metadata[1] = 5678;
-
-            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                from: accounts[0],
-            });
+            await mintTestToken(accounts[1]);
 
             const tokenId = 0;
 
-            await expectRevert(contract.getFullDataForId(tokenId), 'Artwork is unfinished');
+            await expectRevert(contract.getFullDataForId(tokenId), 'Artwork is not filled');
         });
 
         it('returns correct data when NFT is filled', async () => {
@@ -233,9 +198,16 @@ contract('MurAllNFT', (accounts) => {
             });
 
             const tokenId = 0;
-            const receipt = await contract.fillData(tokenId, individualPixels, pixelGroups, pixelGroupIndexes, {
-                from: accounts[1],
-            });
+            const receipt = await contract.fillData(
+                tokenId,
+                colourIndex,
+                individualPixels,
+                pixelGroups,
+                pixelGroupIndexes,
+                {
+                    from: accounts[1],
+                }
+            );
 
             const data = await contract.getFullDataForId(tokenId);
             assert.equal(data.artist, accounts[1]);
@@ -281,7 +253,7 @@ contract('MurAllNFT', (accounts) => {
             });
 
             await expectRevert(
-                contract.fillData(firstTokenId, wrongIndividualPixels, pixelGroups, pixelGroupIndexes, {
+                contract.fillData(firstTokenId, colourIndex, wrongIndividualPixels, pixelGroups, pixelGroupIndexes, {
                     from: accounts[1],
                 }),
                 'Incorrect data'
@@ -316,7 +288,7 @@ contract('MurAllNFT', (accounts) => {
             const firstTokenId = 0;
 
             await expectRevert(
-                contract.fillData(firstTokenId, individualPixels, wrongPixelGroups, pixelGroupIndexes, {
+                contract.fillData(firstTokenId, colourIndex, individualPixels, wrongPixelGroups, pixelGroupIndexes, {
                     from: accounts[1],
                 }),
                 'Incorrect data'
@@ -351,7 +323,7 @@ contract('MurAllNFT', (accounts) => {
             const firstTokenId = 0;
 
             await expectRevert(
-                contract.fillData(firstTokenId, individualPixels, pixelGroups, wrongPixelGroupIndexes, {
+                contract.fillData(firstTokenId, colourIndex, individualPixels, pixelGroups, wrongPixelGroupIndexes, {
                     from: accounts[1],
                 }),
                 'Incorrect data'
@@ -383,7 +355,7 @@ contract('MurAllNFT', (accounts) => {
             const firstTokenId = 0;
 
             await expectRevert(
-                contract.fillData(firstTokenId, individualPixels, pixelGroups, pixelGroupIndexes, {
+                contract.fillData(firstTokenId, colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, {
                     from: accounts[0],
                 }),
                 'Not approved or not owner of token'
@@ -414,9 +386,16 @@ contract('MurAllNFT', (accounts) => {
 
             const firstTokenId = 0;
 
-            const receipt = await contract.fillData(firstTokenId, individualPixels, pixelGroups, pixelGroupIndexes, {
-                from: accounts[1],
-            });
+            const receipt = await contract.fillData(
+                firstTokenId,
+                colourIndex,
+                individualPixels,
+                pixelGroups,
+                pixelGroupIndexes,
+                {
+                    from: accounts[1],
+                }
+            );
 
             await expectEvent(receipt, 'ArtworkFilled', {
                 id: '0',
@@ -431,38 +410,8 @@ contract('MurAllNFT', (accounts) => {
     describe('Get metadata', async () => {
         it('get name returns correct name for minted token', async () => {
             // Given minted token
-            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
-            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
-            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
-
-            const colourIndex = Array(1);
-            colourIndex[0] = colourIndexValue;
-            const individualPixels = Array(1);
-            individualPixels[0] = individualPixelsValue;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroupsValue;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndexesValue;
-
-            const name = 1234;
-            const otherInfo = 5678;
-
-            const metadata = Array(2);
-            metadata[0] = name;
-            metadata[1] = otherInfo;
-            expectedName = await contract.mint(
-                accounts[1],
-                colourIndex,
-                individualPixels,
-                pixelGroups,
-                pixelGroupIndexes,
-                metadata,
-                {
-                    from: accounts[0],
-                }
-            );
-
+            await mintTestToken(accounts[1]);
+            const name = 'hello world!';
             const tokenId = 0;
 
             // when getName
@@ -474,29 +423,8 @@ contract('MurAllNFT', (accounts) => {
 
         it('get number returns correct number for minted token', async () => {
             // Given minted token
-            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
-            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
-            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
-
-            const colourIndex = Array(1);
-            colourIndex[0] = colourIndexValue;
-            const individualPixels = Array(1);
-            individualPixels[0] = individualPixelsValue;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroupsValue;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndexesValue;
-            const name = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            const otherInfo = '0x0004D200162E0000000000000000000000000000000000000000000000010E11';
-
-            const metadata = Array(2);
-            metadata[0] = name;
-            metadata[1] = otherInfo;
+            await mintTestToken(accounts[1]);
             const expectedNumber = 1234;
-            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                from: accounts[0],
-            });
 
             const tokenId = 0;
 
@@ -509,29 +437,8 @@ contract('MurAllNFT', (accounts) => {
 
         it('get SeriesId returns correct series id for minted token', async () => {
             // Given minted token
-            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
-            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
-            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
-
-            const colourIndex = Array(1);
-            colourIndex[0] = colourIndexValue;
-            const individualPixels = Array(1);
-            individualPixels[0] = individualPixelsValue;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroupsValue;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndexesValue;
-            const name = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            const otherInfo = '0x0004D200162E0000000000000000000000000000000000000000000000010E11';
-
-            const metadata = Array(2);
-            metadata[0] = name;
-            metadata[1] = otherInfo;
+            await mintTestToken(accounts[1]);
             const expectedSeriesId = 5678;
-            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                from: accounts[0],
-            });
 
             const tokenId = 0;
 
@@ -542,33 +449,21 @@ contract('MurAllNFT', (accounts) => {
             assert.equal(returnedSeriesId, expectedSeriesId);
         });
 
-        it('get alpha channel returns correct alpha channel for minted token when has alpha', async () => {
+        it('get alpha channel reverts when token is not filled', async () => {
             // Given minted token
-            const colourIndexValue = '0x10E1CCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
-            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
-            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
-
-            const colourIndex = Array(1);
-            colourIndex[0] = colourIndexValue;
-            const individualPixels = Array(1);
-            individualPixels[0] = individualPixelsValue;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroupsValue;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndexesValue;
-            const name = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            const otherInfo = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-
-            const metadata = Array(2);
-            metadata[0] = name;
-            metadata[1] = otherInfo;
-            const expectedAlpha = 4321;
-            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                from: accounts[0],
-            });
+            await mintTestToken(accounts[1]);
 
             const tokenId = 0;
+
+            // when getAlphaChannel
+            await expectRevert(contract.getAlphaChannel(tokenId), 'Artwork is not filled');
+        });
+
+        it('get alpha channel returns correct alpha channel for minted token when has alpha', async () => {
+            // Given minted token
+            await mintTestToken(accounts[1], true);
+            const tokenId = 0;
+            const expectedAlpha = 4321;
 
             // when getAlphaChannel
             const returnedAlpha = await contract.getAlphaChannel(tokenId);
@@ -598,12 +493,15 @@ contract('MurAllNFT', (accounts) => {
             const metadata = Array(2);
             metadata[0] = name;
             metadata[1] = otherInfo;
-            const expectedAlpha = 4321;
+
             await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
                 from: accounts[0],
             });
 
             const tokenId = 0;
+            await contract.fillData(tokenId, colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, {
+                from: accounts[1],
+            });
 
             // reverts when getAlphaChannel
             await expectRevert(contract.getAlphaChannel(tokenId), 'Artwork has no alpha');
@@ -611,30 +509,7 @@ contract('MurAllNFT', (accounts) => {
 
         it('has alpha channel returns true if alpha channel exists for minted token', async () => {
             // Given minted token
-            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
-            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
-            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
-
-            const colourIndex = Array(1);
-            colourIndex[0] = colourIndexValue;
-            const individualPixels = Array(1);
-            individualPixels[0] = individualPixelsValue;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroupsValue;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndexesValue;
-            const name = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            // last bit represents the alpha channel existing
-            const otherInfo = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-
-            const metadata = Array(2);
-            metadata[0] = name;
-            metadata[1] = otherInfo;
-
-            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                from: accounts[0],
-            });
+            await mintTestToken(accounts[1]);
 
             const tokenId = 0;
 
@@ -683,29 +558,7 @@ contract('MurAllNFT', (accounts) => {
 
         it('get artist returns correct artist address for minted token', async () => {
             // Given minted token
-            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
-            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
-            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
-
-            const colourIndex = Array(1);
-            colourIndex[0] = colourIndexValue;
-            const individualPixels = Array(1);
-            individualPixels[0] = individualPixelsValue;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroupsValue;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndexesValue;
-            const name = 1234;
-            const number = 5678;
-
-            const metadata = Array(2);
-            metadata[0] = name;
-            metadata[1] = number;
-
-            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                from: accounts[0],
-            });
+            await mintTestToken(accounts[1]);
 
             const tokenId = 0;
 
@@ -718,29 +571,7 @@ contract('MurAllNFT', (accounts) => {
 
         it('getArtworkFillCompletionStatus returns correct completion status for minted token', async () => {
             // Given minted token
-            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
-            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
-            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
-
-            const colourIndex = Array(1);
-            colourIndex[0] = colourIndexValue;
-            const individualPixels = Array(1);
-            individualPixels[0] = individualPixelsValue;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroupsValue;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndexesValue;
-            const name = 1234;
-            const number = 5678;
-
-            const metadata = Array(2);
-            metadata[0] = name;
-            metadata[1] = number;
-
-            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                from: accounts[0],
-            });
+            await mintTestToken(accounts[1]);
 
             const tokenId = 0;
 
@@ -754,26 +585,7 @@ contract('MurAllNFT', (accounts) => {
         });
 
         it('isArtworkFilled returns false when artwork is not filled', async () => {
-            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
-            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
-            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
-
-            const colourIndex = Array(1);
-            colourIndex[0] = colourIndexValue;
-            const individualPixels = Array(1);
-            individualPixels[0] = individualPixelsValue;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroupsValue;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndexesValue;
-            const metadata = Array(2);
-            metadata[0] = 1234;
-            metadata[1] = 5678;
-
-            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
-                from: accounts[0],
-            });
+            await mintTestToken(accounts[1]);
 
             const firstTokenId = 0;
 
@@ -783,36 +595,127 @@ contract('MurAllNFT', (accounts) => {
         });
 
         it('isArtworkFilled returns true when artwork is filled', async () => {
-            const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
-            const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
-            const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
-            const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
+            // Given minted token
+            await mintTestToken(accounts[1], true);
 
-            const colourIndex = Array(1);
-            colourIndex[0] = colourIndexValue;
-            const individualPixels = Array(1);
-            individualPixels[0] = individualPixelsValue;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroupsValue;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndexesValue;
-            const metadata = Array(2);
-            metadata[0] = 1234;
-            metadata[1] = 5678;
+            const filled = await contract.isArtworkFilled(0);
 
-            await contract.mint(accounts[1], colourIndex, individualPixels, pixelGroups, pixelGroupIndexes, metadata, {
+            assert.isTrue(filled);
+        });
+    });
+
+    describe('Uri management', async () => {
+        it('setting token uri disallowed from account that is not contract owner', async () => {
+            const uri = 'some kind of uri';
+
+            await expectRevert(
+                contract.setTokenUriBase(uri, {
+                    from: accounts[1],
+                }),
+                'Does not have admin role'
+            );
+        });
+
+        it('setting media uri disallowed from account that is not contract owner', async () => {
+            const uri = 'some kind of uri';
+
+            await expectRevert(
+                contract.setMediaUriBase(uri, {
+                    from: accounts[1],
+                }),
+                'Does not have admin role'
+            );
+        });
+
+        it('setting view uri disallowed from account that is not contract owner', async () => {
+            const uri = 'some kind of uri';
+
+            await expectRevert(
+                contract.setViewUriBase(uri, {
+                    from: accounts[1],
+                }),
+                'Does not have admin role'
+            );
+        });
+
+        it('setting token uri allowed from contract owner', async () => {
+            const uri = 'some kind of uri';
+
+            const receipt = await contract.setTokenUriBase(uri, {
                 from: accounts[0],
             });
 
-            const firstTokenId = 0;
+            await mintTestToken(accounts[1]);
 
-            const receipt = await contract.fillData(firstTokenId, individualPixels, pixelGroups, pixelGroupIndexes, {
-                from: accounts[1],
+            assert.equal(await contract.tokenURI(0), uri + '0');
+        });
+
+        it('setting media uri allowed from contract owner', async () => {
+            const uri = 'some kind of uri';
+
+            const receipt = await contract.setMediaUriBase(uri, {
+                from: accounts[0],
+            });
+            await mintTestToken(accounts[1]);
+
+            assert.equal(await contract.mediaURI(0), uri + '0');
+        });
+
+        it('setting view uri allowed from contract owner', async () => {
+            const uri = 'some kind of uri';
+
+            const receipt = await contract.setViewUriBase(uri, {
+                from: accounts[0],
             });
 
-            const filled = await contract.isArtworkFilled(firstTokenId);
+            await mintTestToken(accounts[1]);
 
-            assert.isTrue(filled);
+            assert.equal(await contract.viewURI(0), uri + '0');
+        });
+
+        it('once token uri set token uris with ids outside total supply throws error', async () => {
+            const uri = 'some kind of uri';
+
+            const receipt = await contract.setTokenUriBase(uri, {
+                from: accounts[0],
+            });
+
+            await expectRevert(
+                contract.tokenURI(0, {
+                    from: accounts[0],
+                }),
+                'ERC721Metadata: URI query for nonexistent token'
+            );
+        });
+
+        it('once media uri set token uris with ids outside total supply throws error', async () => {
+            const uri = 'some kind of uri';
+
+            const receipt = await contract.setMediaUriBase(uri, {
+                from: accounts[0],
+            });
+
+            await expectRevert(
+                contract.mediaURI(0, {
+                    from: accounts[0],
+                }),
+                'Invalid Token ID'
+            );
+        });
+
+        it('once view uri set token uris with ids outside total supply throws error', async () => {
+            const uri = 'some kind of uri';
+
+            const receipt = await contract.setViewUriBase(uri, {
+                from: accounts[0],
+            });
+
+            await expectRevert(
+                contract.viewURI(0, {
+                    from: accounts[0],
+                }),
+                'Invalid Token ID'
+            );
         });
     });
 });

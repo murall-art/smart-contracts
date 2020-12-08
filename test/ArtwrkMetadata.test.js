@@ -6,7 +6,7 @@ const ArtwrkMetadata = artifacts.require('./ArtwrkMetadata.sol');
 const MurAllNFT = artifacts.require('./MurAllNFT.sol');
 
 contract('ArtwrkMetadata', ([owner, user]) => {
-    const mintTestToken = async (fromAddress, metadata) => {
+    const mintTestToken = async (fromAddress, metadata, fill = false) => {
         // Given token from an ERC721 contract (not sure how to mock this)
         const colourIndexValue = '0x10e1ccddeeff00112233445566778899aabbccddeeff00112233445566778899';
         const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
@@ -33,6 +33,22 @@ contract('ArtwrkMetadata', ([owner, user]) => {
                 from: owner,
             }
         );
+        if (fill) {
+            await this.murAllNFT.fillData(0, colourIndexes, individualPixels, pixelGroups, pixelGroupIndexes, {
+                from: fromAddress,
+            });
+        }
+    };
+    const setupUris = async () => {
+        await this.murAllNFT.setTokenUriBase('token uri', {
+            from: owner,
+        });
+        await this.murAllNFT.setViewUriBase('view uri', {
+            from: owner,
+        });
+        await this.murAllNFT.setMediaUriBase('media uri', {
+            from: owner,
+        });
     };
 
     const getAddressString = (address) => {
@@ -40,7 +56,7 @@ contract('ArtwrkMetadata', ([owner, user]) => {
     };
 
     beforeEach(async () => {
-        this.murAllNFT = await MurAllNFT.new({ from: owner });
+        this.murAllNFT = await MurAllNFT.new([owner], { from: owner });
 
         this.contract = await ArtwrkMetadata.new(this.murAllNFT.address, { from: owner });
     });
@@ -64,180 +80,23 @@ contract('ArtwrkMetadata', ([owner, user]) => {
         });
     });
 
-    describe('Uri management', async () => {
-        it('setting token uri disallowed from account that is not contract owner', async () => {
-            const uri = 'some kind of uri';
-
-            await expectRevert(
-                this.contract.setTokenUriBase(uri, {
-                    from: user,
-                }),
-                'caller is not the owner'
-            );
-        });
-
-        it('setting media uri disallowed from account that is not contract owner', async () => {
-            const uri = 'some kind of uri';
-
-            await expectRevert(
-                this.contract.setMediaUriBase(uri, {
-                    from: user,
-                }),
-                'caller is not the owner'
-            );
-        });
-
-        it('setting view uri disallowed from account that is not contract owner', async () => {
-            const uri = 'some kind of uri';
-
-            await expectRevert(
-                this.contract.setViewUriBase(uri, {
-                    from: user,
-                }),
-                'caller is not the owner'
-            );
-        });
-
-        it('setting token uri allowed from contract owner', async () => {
-            const uri = 'some kind of uri';
-            const metadata = Array(2);
-            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-
-            const receipt = await this.contract.setTokenUriBase(uri, {
-                from: owner,
-            });
-
-            await expectEvent(receipt, 'TokenUriBaseSet', {
-                tokenUriBase: uri,
-            });
-
-            await mintTestToken(user, metadata);
-
-            assert.equal(await this.contract.tokenURI(0), uri + '0');
-        });
-
-        it('setting media uri allowed from contract owner', async () => {
-            const uri = 'some kind of uri';
-            const metadata = Array(2);
-            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-
-            const receipt = await this.contract.setMediaUriBase(uri, {
-                from: owner,
-            });
-
-            await expectEvent(receipt, 'MediaUriBaseSet', {
-                mediaUriBase: uri,
-            });
-
-            await mintTestToken(user, metadata);
-
-            assert.equal(await this.contract.mediaURI(0), uri + '0');
-        });
-
-        it('setting view uri allowed from contract owner', async () => {
-            const uri = 'some kind of uri';
-            const metadata = Array(2);
-            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-
-            const receipt = await this.contract.setViewUriBase(uri, {
-                from: owner,
-            });
-
-            await expectEvent(receipt, 'ViewUriBaseSet', {
-                viewUriBase: uri,
-            });
-
-            await mintTestToken(user, metadata);
-
-            assert.equal(await this.contract.viewURI(0), uri + '0');
-        });
-
-        it('once token uri set token uris with ids outside total supply throws error', async () => {
-            const uri = 'some kind of uri';
-            const metadata = Array(2);
-            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-
-            const receipt = await this.contract.setTokenUriBase(uri, {
-                from: owner,
-            });
-
-            await expectRevert(
-                this.contract.tokenURI(0, {
-                    from: owner,
-                }),
-                'Invalid Token ID'
-            );
-        });
-
-        it('once media uri set token uris with ids outside total supply throws error', async () => {
-            const uri = 'some kind of uri';
-            const metadata = Array(2);
-            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-
-            const receipt = await this.contract.setMediaUriBase(uri, {
-                from: owner,
-            });
-
-            await expectRevert(
-                this.contract.mediaURI(0, {
-                    from: owner,
-                }),
-                'Invalid Token ID'
-            );
-        });
-
-        it('once view uri set token uris with ids outside total supply throws error', async () => {
-            const uri = 'some kind of uri';
-            const metadata = Array(2);
-            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-
-            const receipt = await this.contract.setViewUriBase(uri, {
-                from: owner,
-            });
-
-            await expectRevert(
-                this.contract.viewURI(0, {
-                    from: owner,
-                }),
-                'Invalid Token ID'
-            );
-        });
-    });
-
     describe('get metadata', async () => {
-        it('returns correct metadata with alpha channel', async () => {
+        it('returns correct metadata when filled', async () => {
             const metadata = Array(2);
             metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
             metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
 
-            await this.contract.setTokenUriBase("token uri", {
-                from: owner,
-            });
-
-            await this.contract.setViewUriBase("view uri", {
-                from: owner,
-            });
-
-            await this.contract.setMediaUriBase("media uri", {
-                from: owner,
-            });
-
+            await setupUris();
 
             const expectedMetadata =
                 '{\n  "name": "hello world!",\n  "description": "By Artist ' +
                 getAddressString(user) +
-                ', Number 1234 from Series 5678, with alpha (RGB565 channel 4321)",\n  "external_url": "view uri0",\n  "image": "media uri0",\n  "attributes": [\n    {\n      "trait_type": "name",\n      "value": "hello world!"\n    },\n    {\n      "trait_type": "artist",\n      "value": "' +
+                ', Number 1234 from Series 5678",\n  "external_url": "view uri0",\n  "image": "media uri0",\n  "attributes": [\n    {\n      "trait_type": "Name",\n      "value": "hello world!"\n    },\n    {\n      "trait_type": "Artist",\n      "value": "' +
                 getAddressString(user) +
-                '"\n    },\n    {\n      "display_type": "number",\n      "trait_type": "Alpha channel (RGB565)",\n      "value": 4321\n    },\n    {\n      "display_type": "number",\n      "trait_type": "number",\n      "value": 1234\n    },\n    {\n      "display_type": "number",\n      "trait_type": "Series Id",\n      "value": 5678\n    }\n  ]\n}';
+                '"\n    },\n    {\n      "trait_type": "Filled",\n      "value": "Filled"\n    },\n    {\n      "display_type": "number",\n      "trait_type": "Number",\n      "value": 1234\n    },\n    {\n      "display_type": "number",\n      "trait_type": "Series Id",\n      "value": 5678\n    }\n  ]\n}';
             const tokenId = 0;
 
-            await mintTestToken(user, metadata);
+            await mintTestToken(user, metadata, true);
 
             const metadataRaw = await this.contract.getArtwrkMetadata(tokenId, {
                 from: user,
@@ -246,17 +105,17 @@ contract('ArtwrkMetadata', ([owner, user]) => {
             assert.equal(metadataRaw, expectedMetadata);
         });
 
-        it('returns correct metadata without alpha channel', async () => {
+        it('returns correct metadata when not filled', async () => {
             const metadata = Array(2);
             metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
             metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000000';
-
+            await setupUris();
             const expectedMetadata =
                 '{\n  "name": "hello world!",\n  "description": "By Artist ' +
                 getAddressString(user) +
-                ', Number 1234 from Series 5678",\n  "external_url": "0",\n  "image": "0",\n  "attributes": [\n    {\n      "trait_type": "name",\n      "value": "hello world!"\n    },\n    {\n      "trait_type": "artist",\n      "value": "' +
+                ', Number 1234 from Series 5678",\n  "external_url": "view uri0",\n  "image": "media uri0",\n  "attributes": [\n    {\n      "trait_type": "Name",\n      "value": "hello world!"\n    },\n    {\n      "trait_type": "Artist",\n      "value": "' +
                 getAddressString(user) +
-                '"\n    },\n    {\n      "display_type": "number",\n      "trait_type": "number",\n      "value": 1234\n    },\n    {\n      "display_type": "number",\n      "trait_type": "Series Id",\n      "value": 5678\n    }\n  ]\n}';
+                '"\n    },\n    {\n      "trait_type": "Filled",\n      "value": "Not filled"\n    },\n    {\n      "display_type": "number",\n      "trait_type": "Number",\n      "value": 1234\n    },\n    {\n      "display_type": "number",\n      "trait_type": "Series Id",\n      "value": 5678\n    }\n  ]\n}';
             const tokenId = 0;
 
             await mintTestToken(user, metadata);

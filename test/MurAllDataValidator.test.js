@@ -26,37 +26,18 @@ contract('MurAllDataValidator', ([owner, user]) => {
             const pixel = web3.utils.toBN('0x000000000012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F');
             const pixel2 = web3.utils.toBN('0x000000000012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F');
             const pixel3 = web3.utils.toBN('0x000000000012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F');
-            const pixelGroup = web3.utils.toBN('0x26a4d3a4217ad135efa1f04d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab');
-            const pixelGroupIndex = web3.utils.toBN(
-                '0x3039303930393039303930393039303930393039303930393039303930393039'
-            );
 
-            const metadata = Array(2);
-            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
             const pixelData = Array(3);
             pixelData[0] = pixel;
             pixelData[1] = pixel2;
             pixelData[2] = pixel3;
-            const pixelGroups = Array(1);
-            pixelGroups[0] = pixelGroup;
-            const pixelGroupIndexes = Array(1);
-            pixelGroupIndexes[0] = pixelGroupIndex;
-            const transparencyHint = [0];
 
-            const pixelCount = await this.contract.validate(
-                pixelData,
-                pixelGroups,
-                pixelGroupIndexes,
-                metadata,
-                transparencyHint
-            );
-            assert.equal(pixelCount, 55);
+            const pixelCount = await this.contract.validateSinglePixelData(pixelData);
+            assert.isTrue(web3.utils.toBN(pixelCount).eq(web3.utils.toBN(23)));
         });
 
         it('returns pixel count minus transparent pixels from group when alpha is enabled', async () => {
             // given
-            const pixel = web3.utils.toBN('0x0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F');
             const pixelGroup = web3.utils.toBN('0x00a4d3a4007ad100efa1004d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab');
             const pixelGroupIndex = web3.utils.toBN(
                 '0x3039303930393039303930393039303930393039303930393039303930393039'
@@ -65,27 +46,19 @@ contract('MurAllDataValidator', ([owner, user]) => {
             const metadata = Array(2);
             metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
             metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-            const pixelData = Array(1);
-            pixelData[0] = pixel;
+
             const pixelGroups = Array(1);
             pixelGroups[0] = pixelGroup;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndex;
-            const transparencyHint = [0];
 
-            const pixelCount = await this.contract.validate(
-                pixelData,
-                pixelGroups,
-                pixelGroupIndexes,
-                metadata,
-                transparencyHint
-            );
-            assert.equal(pixelCount, 36);
+            const pixelCount = await this.contract.validatePixelGroupData(pixelGroups, pixelGroupIndexes, metadata);
+            console.log(pixelCount.toString());
+            assert.isTrue(web3.utils.toBN(pixelCount).eq(web3.utils.toBN(28)));
         });
 
         it('returns pixel count including all colours when alpha is disabled', async () => {
             // given
-            const pixel = web3.utils.toBN('0x0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F');
             const pixelGroup = web3.utils.toBN('0x00a4d3a4007ad100efa1004d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab');
             const pixelGroupIndex = web3.utils.toBN(
                 '0x3039303930393039303930393039303930393039303930393039303930393039'
@@ -94,51 +67,33 @@ contract('MurAllDataValidator', ([owner, user]) => {
             const metadata = Array(2);
             metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
             metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000000';
-            const pixelData = Array(1);
-            pixelData[0] = pixel;
+
             const pixelGroups = Array(1);
             pixelGroups[0] = pixelGroup;
             const pixelGroupIndexes = Array(1);
             pixelGroupIndexes[0] = pixelGroupIndex;
-            const transparencyHint = [0];
 
-            const pixelCount = await this.contract.validate(
-                pixelData,
-                pixelGroups,
-                pixelGroupIndexes,
-                metadata,
-                transparencyHint
-            );
-            assert.equal(pixelCount, 40);
+            const pixelCount = await this.contract.validatePixelGroupData(pixelGroups, pixelGroupIndexes, metadata);
+            assert.isTrue(web3.utils.toBN(pixelCount).eq(web3.utils.toBN(32)));
         });
 
-         it('does not check indexes outside of whats passed in transparency hint', async () => {
-             // given
-             const pixel = web3.utils.toBN('0x0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F0012d61F');
-             const pixelGroup = web3.utils.toBN('0x00a4d3a4007ad100efa1004d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab');
-             const pixelGroupIndex = web3.utils.toBN(
-                 '0x3039303930393039303930393039303930393039303930393039303930393039'
-             );
+        it('does not allow group index data with unexpected size', async () => {
+            // given
 
-             const metadata = Array(2);
-             metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-             metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
-             const pixelData = Array(1);
-             pixelData[0] = pixel;
-             const pixelGroups = Array(1);
-             pixelGroups[0] = pixelGroup;
-             const pixelGroupIndexes = Array(1);
-             pixelGroupIndexes[0] = pixelGroupIndex;
-             const transparencyHint = [];
+            const metadata = Array(2);
+            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
+            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
 
-             const pixelCount = await this.contract.validate(
-                 pixelData,
-                 pixelGroups,
-                 pixelGroupIndexes,
-                 metadata,
-                 transparencyHint
-             );
-             assert.equal(pixelCount, 40);
-         });
+            // 17 groups
+            const pixelGroups = Array(17).fill(0);
+
+            // pixel groups should have length of 2 (16 group indexes per item in array, and there are 17 groups)
+            const pixelGroupIndexes = Array(1).fill(0);
+
+            await expectRevert(
+                this.contract.validatePixelGroupData(pixelGroups, pixelGroupIndexes, metadata),
+                'unexpected group index array length'
+            );
+        });
     });
 });

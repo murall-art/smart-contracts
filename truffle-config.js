@@ -18,17 +18,11 @@ module.exports = {
             network_id: '*',
         },
         ropsten: {
-            provider: new HDWalletProvider(
-                MNENOMIC,
-                'https://ropsten.infura.io/v3/' + INFURA_API_KEY
-            ),
+            provider: new HDWalletProvider(MNENOMIC, 'https://ropsten.infura.io/v3/' + INFURA_API_KEY),
             network_id: 3,
         },
         rinkeby: {
-            provider: new HDWalletProvider(
-                MNENOMIC,
-                'https://rinkeby.infura.io/v3/' + INFURA_API_KEY
-            ),
+            provider: new HDWalletProvider(MNENOMIC, 'https://rinkeby.infura.io/v3/' + INFURA_API_KEY),
             network_id: 4,
         },
     },
@@ -38,11 +32,11 @@ module.exports = {
             settings: {
                 optimizer: {
                     enabled: true,
-                    runs: 200,
+                    runs: 21000,
                 },
                 evmVersion: 'constantinople',
             },
         },
     },
-    plugins: ["solidity-coverage"]
+    plugins: ['solidity-coverage'],
 };

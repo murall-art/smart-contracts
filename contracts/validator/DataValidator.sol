@@ -1,11 +1,13 @@
 pragma solidity ^0.6.0;
 
 abstract contract DataValidator {
-    function validate(
-        uint256[] calldata pixelData,
+    function validateSinglePixelData(
+        uint256[] calldata pixelData
+    ) external virtual pure returns (uint256 numberOfPixels);
+    
+    function validatePixelGroupData(
         uint256[] calldata pixelGroups,
         uint256[] calldata pixelGroupIndexes,
-        uint256[2] calldata metadata,
-        uint256[] calldata pixelGroupTransparencyHint
+        uint256[2] calldata metadata
     ) external virtual pure returns (uint256 numberOfPixels);
 }
