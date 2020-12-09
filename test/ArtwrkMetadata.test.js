@@ -4,6 +4,7 @@ const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
 const ArtwrkMetadata = artifacts.require('./ArtwrkMetadata.sol');
 const MurAllNFT = artifacts.require('./MurAllNFT.sol');
+const ArtwrkImageDataStorage = artifacts.require('./storage/ArtwrkImageDataStorage.sol');
 
 contract('ArtwrkMetadata', ([owner, user]) => {
     const mintTestToken = async (fromAddress, metadata, fill = false) => {
@@ -12,15 +13,15 @@ contract('ArtwrkMetadata', ([owner, user]) => {
         const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
         const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
         const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
+        const transparentPixelGroupsValue = '0xBABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
+        const transparentPixelGroupIndexesValue = '0x00000B00001400001E00002800003200003C00004600005000005A0000640000';
 
-        const colourIndexes = Array(1);
-        colourIndexes[0] = colourIndexValue;
-        const individualPixels = Array(1);
-        individualPixels[0] = individualPixelsValue;
-        const pixelGroups = Array(1);
-        pixelGroups[0] = pixelGroupsValue;
-        const pixelGroupIndexes = Array(1);
-        pixelGroupIndexes[0] = pixelGroupIndexesValue;
+        const colourIndexes = [colourIndexValue];
+        const individualPixels = [individualPixelsValue];
+        const pixelGroups = [pixelGroupsValue];
+        const pixelGroupIndexes = [pixelGroupIndexesValue];
+        const transparentPixelGroups = [transparentPixelGroupsValue];
+        const transparentPixelGroupIndexes = [transparentPixelGroupIndexesValue];
 
         await this.murAllNFT.mint(
             fromAddress,
@@ -28,15 +29,26 @@ contract('ArtwrkMetadata', ([owner, user]) => {
             individualPixels,
             pixelGroups,
             pixelGroupIndexes,
+            transparentPixelGroups,
+            transparentPixelGroupIndexes,
             metadata,
             {
                 from: owner,
             }
         );
         if (fill) {
-            await this.murAllNFT.fillData(0, colourIndexes, individualPixels, pixelGroups, pixelGroupIndexes, {
-                from: fromAddress,
-            });
+            await this.murAllNFT.fillData(
+                0,
+                colourIndexes,
+                individualPixels,
+                pixelGroups,
+                pixelGroupIndexes,
+                transparentPixelGroups,
+                transparentPixelGroupIndexes,
+                {
+                    from: fromAddress,
+                }
+            );
         }
     };
     const setupUris = async () => {
@@ -56,8 +68,9 @@ contract('ArtwrkMetadata', ([owner, user]) => {
     };
 
     beforeEach(async () => {
-        this.murAllNFT = await MurAllNFT.new([owner], { from: owner });
-
+        this.artwrkImageDataStorage = await ArtwrkImageDataStorage.new({ from: owner });
+        this.murAllNFT = await MurAllNFT.new([owner], this.artwrkImageDataStorage.address, { from: owner });
+        await this.artwrkImageDataStorage.transferOwnership(this.murAllNFT.address);
         this.contract = await ArtwrkMetadata.new(this.murAllNFT.address, { from: owner });
     });
 
@@ -82,9 +95,10 @@ contract('ArtwrkMetadata', ([owner, user]) => {
 
     describe('get metadata', async () => {
         it('returns correct metadata when filled', async () => {
-            const metadata = Array(2);
-            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000001';
+            const metadata = [
+                '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000',
+                '0x0004D200162E0000000000000000000000000000000000000000000000000001',
+            ];
 
             await setupUris();
 
@@ -106,9 +120,10 @@ contract('ArtwrkMetadata', ([owner, user]) => {
         });
 
         it('returns correct metadata when not filled', async () => {
-            const metadata = Array(2);
-            metadata[0] = '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000';
-            metadata[1] = '0x0004D200162E0000000000000000000000000000000000000000000000000000';
+            const metadata = [
+                '0x68656c6c6f20776f726c64210000000000000000000000000000000000000000',
+                '0x0004D200162E0000000000000000000000000000000000000000000000000000',
+            ];
             await setupUris();
             const expectedMetadata =
                 '{\n  "name": "hello world!",\n  "description": "By Artist ' +
