@@ -96,12 +96,12 @@ contract('ArtwrkImageDataStorage', (accounts) => {
 
             await expectEvent(receipt, 'Filled', {
                 dataHash: TEST_DATA_HASH,
-                colorIndexCompleteToIndex: web3.utils.toBN(1),
-                individualPixelsCompleteToIndex: web3.utils.toBN(1),
-                pixelGroupsCompleteToIndex: web3.utils.toBN(1),
-                pixelGroupIndexesCompleteToIndex: web3.utils.toBN(1),
-                transparentPixelGroupsCompleteToIndex: web3.utils.toBN(1),
-                transparentPixelGroupIndexesCompleteToIndex: web3.utils.toBN(1),
+                colorIndexLength: web3.utils.toBN(2),
+                individualPixelsLength: web3.utils.toBN(2),
+                pixelGroupsLength: web3.utils.toBN(2),
+                pixelGroupIndexesLength: web3.utils.toBN(2),
+                transparentPixelGroupsLength: web3.utils.toBN(2),
+                transparentPixelGroupIndexesLength: web3.utils.toBN(2),
             });
         });
 
@@ -120,12 +120,12 @@ contract('ArtwrkImageDataStorage', (accounts) => {
             });
             await expectEvent(receipt, 'Filled', {
                 dataHash: '0x15171ffa505d7f499148a5a45111d7370ff4d1a8ee63d2bd058cceacf8ed0a09',
-                colorIndexCompleteToIndex: web3.utils.toBN(1),
-                individualPixelsCompleteToIndex: web3.utils.toBN(0),
-                pixelGroupsCompleteToIndex: web3.utils.toBN(1),
-                pixelGroupIndexesCompleteToIndex: web3.utils.toBN(1),
-                transparentPixelGroupsCompleteToIndex: web3.utils.toBN(0),
-                transparentPixelGroupIndexesCompleteToIndex: web3.utils.toBN(0),
+                colorIndexLength: web3.utils.toBN(2),
+                individualPixelsLength: web3.utils.toBN(0),
+                pixelGroupsLength: web3.utils.toBN(2),
+                pixelGroupIndexesLength: web3.utils.toBN(2),
+                transparentPixelGroupsLength: web3.utils.toBN(0),
+                transparentPixelGroupIndexesLength: web3.utils.toBN(0),
             });
         });
     });
@@ -151,12 +151,12 @@ contract('ArtwrkImageDataStorage', (accounts) => {
             await fillTestData(accounts[0]);
             const filledStatus = await contract.getArtworkFillCompletionStatus(TEST_DATA_HASH);
 
-            assert.isTrue(filledStatus.colorIndexCompleteToIndex.eq(web3.utils.toBN(1)));
-            assert.isTrue(filledStatus.individualPixelsCompleteToIndex.eq(web3.utils.toBN(1)));
-            assert.isTrue(filledStatus.pixelGroupsCompleteToIndex.eq(web3.utils.toBN(1)));
-            assert.isTrue(filledStatus.pixelGroupIndexesCompleteToIndex.eq(web3.utils.toBN(1)));
-            assert.isTrue(filledStatus.transparentPixelGroupsCompleteToIndex.eq(web3.utils.toBN(1)));
-            assert.isTrue(filledStatus.transparentPixelGroupIndexesCompleteToIndex.eq(web3.utils.toBN(1)));
+            assert.isTrue(filledStatus.colorIndexLength.eq(web3.utils.toBN(2)));
+            assert.isTrue(filledStatus.individualPixelsLength.eq(web3.utils.toBN(2)));
+            assert.isTrue(filledStatus.pixelGroupsLength.eq(web3.utils.toBN(2)));
+            assert.isTrue(filledStatus.pixelGroupIndexesLength.eq(web3.utils.toBN(2)));
+            assert.isTrue(filledStatus.transparentPixelGroupsLength.eq(web3.utils.toBN(2)));
+            assert.isTrue(filledStatus.transparentPixelGroupIndexesLength.eq(web3.utils.toBN(2)));
         });
     });
 

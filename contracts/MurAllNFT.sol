@@ -220,12 +220,12 @@ contract MurAllNFT is ERC721, Ownable, AccessControl {
         view
         onlyExistingTokens(id)
         returns (
-            uint24 colorIndexCompleteToIndex,
-            uint24 individualPixelsCompleteToIndex,
-            uint24 pixelGroupsCompleteToIndex,
-            uint24 pixelGroupIndexesCompleteToIndex,
-            uint24 transparentPixelGroupsCompleteToIndex,
-            uint24 transparentPixelGroupIndexesCompleteToIndex
+            uint256 colorIndexLength,
+            uint256 individualPixelsLength,
+            uint256 pixelGroupsLength,
+            uint256 pixelGroupIndexesLength,
+            uint256 transparentPixelGroupsLength,
+            uint256 transparentPixelGroupIndexesLength
         )
     {
         return artwrkImageDataStorage.getArtworkFillCompletionStatus(artworks[id].dataHash);

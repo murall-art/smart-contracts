@@ -756,30 +756,20 @@ contract('MurAllNFT', (accounts) => {
 
         it('getArtworkFillCompletionStatus returns correct completion status for minted token', async () => {
             // Given minted token
-            await mintTestToken(accounts[1]);
+            await mintTestToken(accounts[1], true);
 
             const tokenId = 0;
 
             // when
-            const returnedCompletionStatus = await contract.getArtworkFillCompletionStatus(tokenId);
+            const filledStatus = await contract.getArtworkFillCompletionStatus(tokenId);
 
             // returns
-            assert.isTrue(web3.utils.toBN(returnedCompletionStatus.colorIndexCompleteToIndex).eq(web3.utils.toBN(0)));
-            assert.isTrue(
-                web3.utils.toBN(returnedCompletionStatus.individualPixelsCompleteToIndex).eq(web3.utils.toBN(0))
-            );
-            assert.isTrue(web3.utils.toBN(returnedCompletionStatus.pixelGroupsCompleteToIndex).eq(web3.utils.toBN(0)));
-            assert.isTrue(
-                web3.utils.toBN(returnedCompletionStatus.pixelGroupIndexesCompleteToIndex).eq(web3.utils.toBN(0))
-            );
-            assert.isTrue(
-                web3.utils.toBN(returnedCompletionStatus.transparentPixelGroupsCompleteToIndex).eq(web3.utils.toBN(0))
-            );
-            assert.isTrue(
-                web3.utils
-                    .toBN(returnedCompletionStatus.transparentPixelGroupIndexesCompleteToIndex)
-                    .eq(web3.utils.toBN(0))
-            );
+            assert.isTrue(filledStatus.colorIndexLength.eq(web3.utils.toBN(1)));
+            assert.isTrue(filledStatus.individualPixelsLength.eq(web3.utils.toBN(1)));
+            assert.isTrue(filledStatus.pixelGroupsLength.eq(web3.utils.toBN(1)));
+            assert.isTrue(filledStatus.pixelGroupIndexesLength.eq(web3.utils.toBN(1)));
+            assert.isTrue(filledStatus.transparentPixelGroupsLength.eq(web3.utils.toBN(1)));
+            assert.isTrue(filledStatus.transparentPixelGroupIndexesLength.eq(web3.utils.toBN(1)));
         });
 
         it('isArtworkFilled returns false when artwork is not filled', async () => {

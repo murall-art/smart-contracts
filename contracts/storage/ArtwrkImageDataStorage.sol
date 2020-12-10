@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract ArtwrkImageDataStorage is Ownable {
     using SafeMath for uint256;
-    uint256 constant FILL_DATA_GAS_RESERVE = 50000;
+    uint256 constant FILL_DATA_GAS_RESERVE = 46000;
 
     struct ArtWorkImageData {
         uint256[] colorIndex;
@@ -15,13 +15,6 @@ contract ArtwrkImageDataStorage is Ownable {
         uint256[] pixelGroupIndexes;
         uint256[] transparentPixelGroups;
         uint256[] transparentPixelGroupIndexes;
-        uint24 colorIndexCompleteToIndex;
-        uint24 individualPixelsCompleteToIndex;
-        uint24 pixelGroupsCompleteToIndex;
-        uint24 pixelGroupIndexesCompleteToIndex;
-        uint24 transparentPixelGroupsCompleteToIndex;
-        uint24 transparentPixelGroupIndexesCompleteToIndex;
-        uint24 exists;
     }
     mapping(bytes32 => ArtWorkImageData) private artworkImageDatas;
 
@@ -35,12 +28,12 @@ contract ArtwrkImageDataStorage is Ownable {
 
     event Filled(
         bytes32 dataHash,
-        uint24 colorIndexCompleteToIndex,
-        uint24 individualPixelsCompleteToIndex,
-        uint24 pixelGroupsCompleteToIndex,
-        uint24 pixelGroupIndexesCompleteToIndex,
-        uint24 transparentPixelGroupsCompleteToIndex,
-        uint24 transparentPixelGroupIndexesCompleteToIndex
+        uint256 colorIndexLength,
+        uint256 individualPixelsLength,
+        uint256 pixelGroupsLength,
+        uint256 pixelGroupIndexesLength,
+        uint256 transparentPixelGroupsLength,
+        uint256 transparentPixelGroupIndexesLength
     );
 
     function fillData(
@@ -62,145 +55,106 @@ contract ArtwrkImageDataStorage is Ownable {
             )
         );
         require(!isArtworkFilled(dataHash), "Artwork is already filled");
-        if (artworkImageDatas[dataHash].exists == 0) {
-            artworkImageDatas[dataHash] = ArtWorkImageData(
-                new uint256[](colorIndex.length),
-                new uint256[](individualPixels.length),
-                new uint256[](pixelGroups.length),
-                new uint256[](pixelGroupIndexes.length),
-                new uint256[](transparentPixelGroups.length),
-                new uint256[](transparentPixelGroupIndexes.length),
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                1
-            );
-        }
+
         ArtWorkImageData storage _artworkImageData = artworkImageDatas[dataHash];
 
         uint256 len;
-        uint24 index;
-        uint24 lastIndex;
+        uint256 index;
 
         // fill colour index
         if (gasleft() > FILL_DATA_GAS_RESERVE && colorIndex.length > 0) {
-            index = _artworkImageData.colorIndexCompleteToIndex == 0
-                ? 0
-                : _artworkImageData.colorIndexCompleteToIndex + 1;
+            index = _artworkImageData.colorIndex.length == 0 ? 0 : _artworkImageData.colorIndex.length + 1;
 
             len = colorIndex.length;
 
             while ((gasleft() > FILL_DATA_GAS_RESERVE) && index < len) {
-                _artworkImageData.colorIndex[index] = colorIndex[index];
-                lastIndex = index;
+                _artworkImageData.colorIndex.push(colorIndex[index]);
                 index++;
             }
-            _artworkImageData.colorIndexCompleteToIndex = lastIndex;
         }
 
         // fill individualPixels index
         if (gasleft() > FILL_DATA_GAS_RESERVE && individualPixels.length > 0) {
-            index = _artworkImageData.individualPixelsCompleteToIndex == 0
-                ? 0
-                : _artworkImageData.individualPixelsCompleteToIndex + 1;
+            index = _artworkImageData.individualPixels.length == 0 ? 0 : _artworkImageData.individualPixels.length + 1;
 
             len = individualPixels.length;
 
             while ((gasleft() > FILL_DATA_GAS_RESERVE) && index < len) {
-                _artworkImageData.individualPixels[index] = individualPixels[index];
-                lastIndex = index;
+                _artworkImageData.individualPixels.push(individualPixels[index]);
                 index++;
             }
-            _artworkImageData.individualPixelsCompleteToIndex = lastIndex;
         }
 
         // fill pixelGroups index
         if (gasleft() > FILL_DATA_GAS_RESERVE && pixelGroups.length > 0) {
-            index = _artworkImageData.pixelGroupsCompleteToIndex == 0
-                ? 0
-                : _artworkImageData.pixelGroupsCompleteToIndex + 1;
+            index = _artworkImageData.pixelGroups.length == 0 ? 0 : _artworkImageData.pixelGroups.length + 1;
 
             len = pixelGroups.length;
 
             while ((gasleft() > FILL_DATA_GAS_RESERVE) && index < len) {
-                _artworkImageData.pixelGroups[index] = pixelGroups[index];
-                lastIndex = index;
+                _artworkImageData.pixelGroups.push(pixelGroups[index]);
                 index++;
             }
-            _artworkImageData.pixelGroupsCompleteToIndex = lastIndex;
         }
 
         // fill pixelGroupIndexes index
         if (gasleft() > FILL_DATA_GAS_RESERVE && pixelGroupIndexes.length > 0) {
-            index = _artworkImageData.pixelGroupIndexesCompleteToIndex == 0
+            index = _artworkImageData.pixelGroupIndexes.length == 0
                 ? 0
-                : _artworkImageData.pixelGroupIndexesCompleteToIndex + 1;
+                : _artworkImageData.pixelGroupIndexes.length + 1;
 
             len = pixelGroupIndexes.length;
 
             while ((gasleft() > FILL_DATA_GAS_RESERVE) && index < len) {
-                _artworkImageData.pixelGroupIndexes[index] = pixelGroupIndexes[index];
-                lastIndex = index;
+                _artworkImageData.pixelGroupIndexes.push(pixelGroupIndexes[index]);
                 index++;
             }
-            _artworkImageData.pixelGroupIndexesCompleteToIndex = lastIndex;
         }
 
         // fill transparentPixelGroups index
         if (gasleft() > FILL_DATA_GAS_RESERVE && transparentPixelGroups.length > 0) {
-            index = _artworkImageData.transparentPixelGroupsCompleteToIndex == 0
+            index = _artworkImageData.transparentPixelGroups.length == 0
                 ? 0
-                : _artworkImageData.transparentPixelGroupsCompleteToIndex + 1;
+                : _artworkImageData.transparentPixelGroups.length + 1;
 
             len = transparentPixelGroups.length;
 
             while ((gasleft() > FILL_DATA_GAS_RESERVE) && index < len) {
-                _artworkImageData.transparentPixelGroups[index] = transparentPixelGroups[index];
-                lastIndex = index;
+                _artworkImageData.transparentPixelGroups.push(transparentPixelGroups[index]);
                 index++;
             }
-            _artworkImageData.transparentPixelGroupsCompleteToIndex = lastIndex;
         }
 
         // fill transparentPixelGroupIndexes index
         if (gasleft() > FILL_DATA_GAS_RESERVE && transparentPixelGroupIndexes.length > 0) {
-            index = _artworkImageData.transparentPixelGroupIndexesCompleteToIndex == 0
+            index = _artworkImageData.transparentPixelGroupIndexes.length == 0
                 ? 0
-                : _artworkImageData.transparentPixelGroupIndexesCompleteToIndex + 1;
+                : _artworkImageData.transparentPixelGroupIndexes.length + 1;
 
             len = transparentPixelGroupIndexes.length;
 
             while ((gasleft() > FILL_DATA_GAS_RESERVE) && index < len) {
-                _artworkImageData.transparentPixelGroupIndexes[index] = transparentPixelGroupIndexes[index];
-                lastIndex = index;
+                _artworkImageData.transparentPixelGroupIndexes.push(transparentPixelGroupIndexes[index]);
                 index++;
             }
-            _artworkImageData.transparentPixelGroupIndexesCompleteToIndex = lastIndex;
         }
+
         emit Filled(
             dataHash,
-            _artworkImageData.colorIndexCompleteToIndex,
-            _artworkImageData.individualPixelsCompleteToIndex,
-            _artworkImageData.pixelGroupsCompleteToIndex,
-            _artworkImageData.pixelGroupIndexesCompleteToIndex,
-            _artworkImageData.transparentPixelGroupsCompleteToIndex,
-            _artworkImageData.transparentPixelGroupIndexesCompleteToIndex
+            _artworkImageData.colorIndex.length,
+            _artworkImageData.individualPixels.length,
+            _artworkImageData.pixelGroups.length,
+            _artworkImageData.pixelGroupIndexes.length,
+            _artworkImageData.transparentPixelGroups.length,
+            _artworkImageData.transparentPixelGroupIndexes.length
         );
         return
-            (colorIndex.length == 0 || _artworkImageData.colorIndexCompleteToIndex == colorIndex.length.sub(1)) &&
-            (individualPixels.length == 0 ||
-                _artworkImageData.individualPixelsCompleteToIndex == individualPixels.length.sub(1)) &&
-            (pixelGroups.length == 0 || _artworkImageData.pixelGroupsCompleteToIndex == pixelGroups.length.sub(1)) &&
-            (pixelGroupIndexes.length == 0 ||
-                _artworkImageData.pixelGroupIndexesCompleteToIndex == pixelGroupIndexes.length.sub(1)) &&
-            (transparentPixelGroups.length == 0 ||
-                _artworkImageData.transparentPixelGroupsCompleteToIndex == transparentPixelGroups.length.sub(1)) &&
-            (transparentPixelGroupIndexes.length == 0 ||
-                _artworkImageData.transparentPixelGroupIndexesCompleteToIndex ==
-                transparentPixelGroupIndexes.length.sub(1));
+            (colorIndex.length == _artworkImageData.colorIndex.length) &&
+            (individualPixels.length == _artworkImageData.individualPixels.length) &&
+            (pixelGroups.length == _artworkImageData.pixelGroups.length) &&
+            (pixelGroupIndexes.length == _artworkImageData.pixelGroupIndexes.length) &&
+            (transparentPixelGroups.length == _artworkImageData.transparentPixelGroups.length) &&
+            (transparentPixelGroupIndexes.length == _artworkImageData.transparentPixelGroupIndexes.length);
     }
 
     function isArtworkFilled(bytes32 dataHash) public view returns (bool) {
@@ -223,23 +177,23 @@ contract ArtwrkImageDataStorage is Ownable {
         public
         view
         returns (
-            uint24 colorIndexCompleteToIndex,
-            uint24 individualPixelsCompleteToIndex,
-            uint24 pixelGroupsCompleteToIndex,
-            uint24 pixelGroupIndexesCompleteToIndex,
-            uint24 transparentPixelGroupsCompleteToIndex,
-            uint24 transparentPixelGroupIndexesCompleteToIndex
+            uint256 colorIndexLength,
+            uint256 individualPixelsLength,
+            uint256 pixelGroupsLength,
+            uint256 pixelGroupIndexesLength,
+            uint256 transparentPixelGroupsLength,
+            uint256 transparentPixelGroupIndexesLength
         )
     {
         ArtWorkImageData memory _artworkImageData = artworkImageDatas[dataHash];
 
         return (
-            _artworkImageData.colorIndexCompleteToIndex,
-            _artworkImageData.individualPixelsCompleteToIndex,
-            _artworkImageData.pixelGroupsCompleteToIndex,
-            _artworkImageData.pixelGroupIndexesCompleteToIndex,
-            _artworkImageData.transparentPixelGroupsCompleteToIndex,
-            _artworkImageData.transparentPixelGroupIndexesCompleteToIndex
+            _artworkImageData.colorIndex.length,
+            _artworkImageData.individualPixels.length,
+            _artworkImageData.pixelGroups.length,
+            _artworkImageData.pixelGroupIndexes.length,
+            _artworkImageData.transparentPixelGroups.length,
+            _artworkImageData.transparentPixelGroupIndexes.length
         );
     }
 
