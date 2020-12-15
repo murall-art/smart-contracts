@@ -6,6 +6,7 @@ const MurAllMarketplace = artifacts.require('./MurAllMarketplace.sol');
 const MurAllBlockList = artifacts.require('./MurAllBlockList.sol');
 const MurAllNFT = artifacts.require('./MurAllNFT.sol');
 const PaintToken = artifacts.require('./PaintToken.sol');
+const ArtwrkImageDataStorage = artifacts.require('./storage/ArtwrkImageDataStorage.sol');
 
 contract('MurAllMarketplace', ([owner, user]) => {
     const approveTransfer = async (fromAddress, toAddress) => {
@@ -18,18 +19,20 @@ contract('MurAllMarketplace', ([owner, user]) => {
         const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
         const pixelGroupsValue = '0xAABBCCDDEEFFABCDEFAAAAAABBBBBBCCCCCCDDDDDDEEEEEEFFFFFF1122331234';
         const pixelGroupIndexesValue = '0x00000A00001400001E00002800003200003C00004600005000005A0000640000';
+        const transparentPixelGroup = web3.utils.toBN(
+            '0x36a4d3a4217ad135efa1f04d7e4ef6a2f0a240be135e17a75fa2414eb2fad6ab'
+        );
+        const transparentPixelGroupIndex = web3.utils.toBN(
+            '0x4039303930393039303930393039303930393039303930393039303930393039'
+        );
 
-        const colourIndex = Array(1);
-        colourIndex[0] = colourIndexValue;
-        const individualPixels = Array(1);
-        individualPixels[0] = individualPixelsValue;
-        const pixelGroups = Array(1);
-        pixelGroups[0] = pixelGroupsValue;
-        const pixelGroupIndexes = Array(1);
-        pixelGroupIndexes[0] = pixelGroupIndexesValue;
-        const metadata = Array(2);
-        metadata[0] = 1234;
-        metadata[1] = 5678;
+        const colourIndex = [colourIndexValue];
+        const individualPixels = [individualPixelsValue];
+        const pixelGroups = [pixelGroupsValue];
+        const pixelGroupIndexes = [pixelGroupIndexesValue];
+        const transparentPixelGroups = [transparentPixelGroup];
+        const transparentPixelGroupIndexes = [transparentPixelGroupIndex];
+        const metadata = [1234, 5678];
 
         await this.murAllNFT.mint(
             fromAddress,
@@ -37,6 +40,8 @@ contract('MurAllMarketplace', ([owner, user]) => {
             individualPixels,
             pixelGroups,
             pixelGroupIndexes,
+            transparentPixelGroups,
+            transparentPixelGroupIndexes,
             metadata,
             {
                 from: owner,
@@ -60,7 +65,10 @@ contract('MurAllMarketplace', ([owner, user]) => {
         this.murAllBlockList = await MurAllBlockList.new({ from: owner });
         this.contract = await MurAllMarketplace.new(this.murAllBlockList.address, { from: owner });
         this.paintToken = await PaintToken.new({ from: owner });
-        this.murAllNFT = await MurAllNFT.new([owner], { from: owner });
+        this.artwrkImageDataStorage = await ArtwrkImageDataStorage.new({ from: owner });
+        this.murAllNFT = await MurAllNFT.new([owner], this.artwrkImageDataStorage.address, { from: owner });
+        await this.artwrkImageDataStorage.transferOwnership(this.murAllNFT.address);
+
         // await this.murAllBlockList.transferOwnership(this.contract.address, { from: owner });
     });
 
