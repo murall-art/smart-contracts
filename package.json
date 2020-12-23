@@ -12,6 +12,7 @@
   },
   "private": true,
   "dependencies": {
+    "ganache-time-traveler": "^1.0.15",
     "truffle": "^5.1.40"
   },
   "devDependencies": {

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.6.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -30,12 +31,12 @@ contract MurAllNFT is ERC721, Ownable, AccessControl {
     ArtWork[] artworks;
 
     /**
-     * @notice Base URI for MurAll ARTWRK's off-chain images
+     * @dev @notice Base URI for MurAll ARTWRK's off-chain images
      */
     string private mediaUriBase;
 
     /**
-     * @notice Base URI to view MurAll ARTWRK's on the MurAll website
+     * @dev @notice Base URI to view MurAll ARTWRK's on the MurAll website
      */
     string private viewUriBase;
 
