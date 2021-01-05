@@ -2,11 +2,11 @@ const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
-const ArtwrkMetadata = artifacts.require('./ArtwrkMetadata.sol');
+const NftMetadata = artifacts.require('./NftMetadata.sol');
 const MurAllNFT = artifacts.require('./MurAllNFT.sol');
-const ArtwrkImageDataStorage = artifacts.require('./storage/ArtwrkImageDataStorage.sol');
+const NftImageDataStorage = artifacts.require('./storage/NftImageDataStorage.sol');
 
-contract('ArtwrkMetadata', ([owner, user]) => {
+contract('NftMetadata', ([owner, user]) => {
     const mintTestToken = async (fromAddress, metadata, fill = false) => {
         // Given token from an ERC721 contract (not sure how to mock this)
         const colourIndexValue = '0x10e1ccddeeff00112233445566778899aabbccddeeff00112233445566778899';
@@ -68,10 +68,10 @@ contract('ArtwrkMetadata', ([owner, user]) => {
     };
 
     beforeEach(async () => {
-        this.artwrkImageDataStorage = await ArtwrkImageDataStorage.new({ from: owner });
-        this.murAllNFT = await MurAllNFT.new([owner], this.artwrkImageDataStorage.address, { from: owner });
-        await this.artwrkImageDataStorage.transferOwnership(this.murAllNFT.address);
-        this.contract = await ArtwrkMetadata.new(this.murAllNFT.address, { from: owner });
+        this.NftImageDataStorage = await NftImageDataStorage.new({ from: owner });
+        this.murAllNFT = await MurAllNFT.new([owner], this.NftImageDataStorage.address, { from: owner });
+        await this.NftImageDataStorage.transferOwnership(this.murAllNFT.address);
+        this.contract = await NftMetadata.new(this.murAllNFT.address, { from: owner });
     });
 
     describe('deployment', async () => {
@@ -112,7 +112,7 @@ contract('ArtwrkMetadata', ([owner, user]) => {
 
             await mintTestToken(user, metadata, true);
 
-            const metadataRaw = await this.contract.getArtwrkMetadata(tokenId, {
+            const metadataRaw = await this.contract.getNftMetadata(tokenId, {
                 from: user,
             });
 
@@ -135,7 +135,7 @@ contract('ArtwrkMetadata', ([owner, user]) => {
 
             await mintTestToken(user, metadata);
 
-            const metadataRaw = await this.contract.getArtwrkMetadata(tokenId, {
+            const metadataRaw = await this.contract.getNftMetadata(tokenId, {
                 from: user,
             });
 

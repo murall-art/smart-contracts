@@ -3,7 +3,7 @@ const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
 const MurAllNFT = artifacts.require('./MurAllNFT.sol');
-const ArtwrkImageDataStorage = artifacts.require('./storage/ArtwrkImageDataStorage.sol');
+const NftImageDataStorage = artifacts.require('./storage/NftImageDataStorage.sol');
 contract('MurAllNFT', (accounts) => {
     const mintTestToken = async (fromAddress, fill = false) => {
         // Given minted token
@@ -62,10 +62,10 @@ contract('MurAllNFT', (accounts) => {
     let contract;
 
     beforeEach(async () => {
-        this.artwrkImageDataStorage = await ArtwrkImageDataStorage.new({ from: accounts[0] });
+        this.NftImageDataStorage = await NftImageDataStorage.new({ from: accounts[0] });
 
-        contract = await MurAllNFT.new([accounts[0]], this.artwrkImageDataStorage.address, { from: accounts[0] });
-        await this.artwrkImageDataStorage.transferOwnership(contract.address);
+        contract = await MurAllNFT.new([accounts[0]], this.NftImageDataStorage.address, { from: accounts[0] });
+        await this.NftImageDataStorage.transferOwnership(contract.address);
     });
 
     describe('Deployment', async () => {

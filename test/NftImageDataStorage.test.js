@@ -2,9 +2,9 @@ const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers');
 const Web3 = require('web3');
 const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 
-const ArtwrkImageDataStorage = artifacts.require('./storage/ArtwrkImageDataStorage.sol');
+const NftImageDataStorage = artifacts.require('./storage/NftImageDataStorage.sol');
 const TEST_DATA_HASH = '0x3f6b2cbd90930fb7659aa6ba4c8c480fdc3395ca9652e48036d71e46ce186661';
-contract('ArtwrkImageDataStorage', (accounts) => {
+contract('NftImageDataStorage', (accounts) => {
     const fillTestData = async (fromAddress) => {
         const colourIndexValue = '0xAABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899';
         const individualPixelsValue = '0xAABB000064AABB0000C8DDEE00012CFFEE000190CCBB0001F4AAFF0000020000';
@@ -40,7 +40,7 @@ contract('ArtwrkImageDataStorage', (accounts) => {
     let contract;
 
     beforeEach(async () => {
-        contract = await ArtwrkImageDataStorage.new({ from: accounts[0] });
+        contract = await NftImageDataStorage.new({ from: accounts[0] });
     });
 
     describe('Deployment', async () => {

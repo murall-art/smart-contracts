@@ -4,9 +4,9 @@ pragma solidity ^0.6.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import {MurAllNFT} from "./../MurAllNFT.sol";
-import {IArtwrkMetadata} from "./IArtwrkMetadata.sol";
+import {INftMetadata} from "./INftMetadata.sol";
 
-contract ArtwrkMetadata is Ownable, IArtwrkMetadata {
+contract NftMetadata is Ownable, INftMetadata {
     using Strings for uint256;
     string public constant INVALID_TOKEN_ID = "Invalid Token ID";
 
@@ -17,11 +17,11 @@ contract ArtwrkMetadata is Ownable, IArtwrkMetadata {
     }
 
     /**
-     * @notice Get human-readable metadata for a given ARTWRK by Token ID.
-     * @param _tokenId the token id of the given ARTWRK
-     * @return metadata the MurAll ARTWRK's human-readable metadata
+     * @notice Get human-readable metadata for a given MURALL by Token ID.
+     * @param _tokenId the token id of the given MURALL
+     * @return metadata the MURALL NFT's human-readable metadata
      */
-    function getArtwrkMetadata(uint256 _tokenId) external override view returns (string memory metadata) {
+    function getNftMetadata(uint256 _tokenId) external override view returns (string memory metadata) {
         require(_tokenId < murAllNFT.totalSupply(), INVALID_TOKEN_ID);
 
         // Name
