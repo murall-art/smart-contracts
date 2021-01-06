@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract ArtwrkImageDataStorage is Ownable {
+contract NftImageDataStorage is Ownable {
     using SafeMath for uint256;
     uint256 constant FILL_DATA_GAS_RESERVE = 46000;
 

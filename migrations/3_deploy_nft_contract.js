@@ -1,11 +1,11 @@
 var MurAllNFT = artifacts.require('./MurAllNFT.sol');
-var ArtwrkImageDataStorage = artifacts.require('./storage/ArtwrkImageDataStorage.sol');
+var NftImageDataStorage = artifacts.require('./storage/NftImageDataStorage.sol');
 
 module.exports = async function (deployer, network, accounts) {
-    await deployer.deploy(ArtwrkImageDataStorage);
-    artwrkImageDataStorageInstance = await ArtwrkImageDataStorage.deployed();
+    await deployer.deploy(NftImageDataStorage);
+    NftImageDataStorageInstance = await NftImageDataStorage.deployed();
 
-    await deployer.deploy(MurAllNFT, [accounts[0]], artwrkImageDataStorageInstance.address);
+    await deployer.deploy(MurAllNFT, [accounts[0]], NftImageDataStorageInstance.address);
     murallNftInstance = await MurAllNFT.deployed();
-    await artwrkImageDataStorageInstance.transferOwnership(murallNftInstance.address);
+    await NftImageDataStorageInstance.transferOwnership(murallNftInstance.address);
 };

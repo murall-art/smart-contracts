@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import {ArtwrkImageDataStorage} from "./storage/ArtwrkImageDataStorage.sol";
+import {NftImageDataStorage} from "./storage/NftImageDataStorage.sol";
 
 contract MurAllNFT is ERC721, Ownable, AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -27,16 +27,16 @@ contract MurAllNFT is ERC721, Ownable, AccessControl {
         uint256 metadata;
     }
 
-    ArtwrkImageDataStorage artwrkImageDataStorage;
+    NftImageDataStorage nftImageDataStorage;
     ArtWork[] artworks;
 
     /**
-     * @dev @notice Base URI for MurAll ARTWRK's off-chain images
+     * @dev @notice Base URI for MURALL NFT's off-chain images
      */
     string private mediaUriBase;
 
     /**
-     * @dev @notice Base URI to view MurAll ARTWRK's on the MurAll website
+     * @dev @notice Base URI to view MURALL NFT's on the MurAll website
      */
     string private viewUriBase;
 
@@ -66,14 +66,14 @@ contract MurAllNFT is ERC721, Ownable, AccessControl {
     event ArtworkFilled(uint256 indexed id, bool finished);
 
     /* TODO Name TBC: I was thinking something to signify its a small piece, like a snippet of art */
-    constructor(address[] memory admins, ArtwrkImageDataStorage _artwrkImageDataStorageAddr)
+    constructor(address[] memory admins, NftImageDataStorage _nftImageDataStorageAddr)
         public
-        ERC721("MurAll", "ARTWRK")
+        ERC721("MurAll", "MURALL")
     {
         for (uint256 i = 0; i < admins.length; ++i) {
             _setupRole(ADMIN_ROLE, admins[i]);
         }
-        artwrkImageDataStorage = _artwrkImageDataStorageAddr;
+        nftImageDataStorage = _nftImageDataStorageAddr;
     }
 
     function mint(
@@ -132,7 +132,7 @@ contract MurAllNFT is ERC721, Ownable, AccessControl {
         );
         require(artworks[id].dataHash == dataHash, "Incorrect data");
 
-        bool filled = artwrkImageDataStorage.fillData(
+        bool filled = nftImageDataStorage.fillData(
             colorIndex,
             individualPixels,
             pixelGroups,
@@ -186,7 +186,7 @@ contract MurAllNFT is ERC721, Ownable, AccessControl {
             uint256[] memory transparentPixelGroupIndexes
         )
     {
-        return artwrkImageDataStorage.getArtworkForDataHash(artworks[id].dataHash);
+        return nftImageDataStorage.getArtworkForDataHash(artworks[id].dataHash);
     }
 
     function getArtworkDataHashForId(uint256 id) public view onlyExistingTokens(id) returns (bytes32) {
@@ -213,7 +213,7 @@ contract MurAllNFT is ERC721, Ownable, AccessControl {
         require(hasAlphaChannel(id), "Artwork has no alpha");
         // alpha is the first color in the color index
         return
-            artwrkImageDataStorage.getColorIndexForDataHash(artworks[id].dataHash)[0] >> CONVERSION_SHIFT_BYTES_RGB565;
+            nftImageDataStorage.getColorIndexForDataHash(artworks[id].dataHash)[0] >> CONVERSION_SHIFT_BYTES_RGB565;
     }
 
     function getArtworkFillCompletionStatus(uint256 id)
@@ -229,11 +229,11 @@ contract MurAllNFT is ERC721, Ownable, AccessControl {
             uint256 transparentPixelGroupIndexesLength
         )
     {
-        return artwrkImageDataStorage.getArtworkFillCompletionStatus(artworks[id].dataHash);
+        return nftImageDataStorage.getArtworkFillCompletionStatus(artworks[id].dataHash);
     }
 
     function isArtworkFilled(uint256 id) public view onlyExistingTokens(id) returns (bool) {
-        return artwrkImageDataStorage.isArtworkFilled(artworks[id].dataHash);
+        return nftImageDataStorage.isArtworkFilled(artworks[id].dataHash);
     }
 
     function getArtist(uint256 id) public view onlyExistingTokens(id) returns (address) {
@@ -241,7 +241,7 @@ contract MurAllNFT is ERC721, Ownable, AccessControl {
     }
 
     /**
-     * @notice Set the base URI for creating `tokenURI` for each MurAll ARTWRK.
+     * @notice Set the base URI for creating `tokenURI` for each MURALL NFT.
      * Only invokable by admin role.
      * @param _tokenUriBase base for the ERC721 tokenURI
      */
@@ -251,9 +251,9 @@ contract MurAllNFT is ERC721, Ownable, AccessControl {
     }
 
     /**
-     * @notice Set the base URI for the image of each MurAll ARTWRK.
+     * @notice Set the base URI for the image of each MURALL NFT.
      * Only invokable by admin role.
-     * @param _mediaUriBase base for the mediaURI shown in metadata for each MurAll ARTWRK
+     * @param _mediaUriBase base for the mediaURI shown in metadata for each MURALL NFT
      */
     function setMediaUriBase(string calldata _mediaUriBase) external onlyAdmin {
         // Set the base for metadata tokenURI
@@ -261,9 +261,9 @@ contract MurAllNFT is ERC721, Ownable, AccessControl {
     }
 
     /**
-     * @notice Set the base URI for the viewing the MurAll ARTWRK on the MurAll website.
+     * @notice Set the base URI for the viewing the MURALL NFT on the MurAll website.
      * Only invokable by admin role.
-     * @param _viewUriBase base URI for viewing an MurAll ARTWRK on the MurAll website
+     * @param _viewUriBase base URI for viewing an MURALL NFT on the MurAll website
      */
     function setViewUriBase(string calldata _viewUriBase) external onlyAdmin {
         // Set the base for metadata tokenURI
@@ -271,8 +271,8 @@ contract MurAllNFT is ERC721, Ownable, AccessControl {
     }
 
     /**
-     * @notice Get view URI for a given MurAll ARTWRK's Token ID.
-     * @param _tokenId the Token ID of a previously minted MurAll ARTWRK
+     * @notice Get view URI for a given MURALL NFT's Token ID.
+     * @param _tokenId the Token ID of a previously minted MURALL NFT
      * @return uri the off-chain URI to view the Avastar on the MurAll website
      */
     function viewURI(uint256 _tokenId) public view returns (string memory uri) {
@@ -281,9 +281,9 @@ contract MurAllNFT is ERC721, Ownable, AccessControl {
     }
 
     /**
-     * @notice Get media URI for a given MurAll ARTWRK's Token ID.
-     * @param _tokenId the Token ID of a previously minted MurAll ARTWRK's
-     * @return uri the off-chain URI to the MurAll ARTWRK's image
+     * @notice Get media URI for a given MURALL NFT's Token ID.
+     * @param _tokenId the Token ID of a previously minted MURALL NFT's
+     * @return uri the off-chain URI to the MURALL NFT's image
      */
     function mediaURI(uint256 _tokenId) public view returns (string memory uri) {
         require(_tokenId < totalSupply(), INVALID_TOKEN_ID);

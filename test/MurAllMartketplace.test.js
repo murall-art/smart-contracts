@@ -6,7 +6,7 @@ const MurAllMarketplace = artifacts.require('./MurAllMarketplace.sol');
 const MurAllBlockList = artifacts.require('./MurAllBlockList.sol');
 const MurAllNFT = artifacts.require('./MurAllNFT.sol');
 const PaintToken = artifacts.require('./PaintToken.sol');
-const ArtwrkImageDataStorage = artifacts.require('./storage/ArtwrkImageDataStorage.sol');
+const NftImageDataStorage = artifacts.require('./storage/NftImageDataStorage.sol');
 
 contract('MurAllMarketplace', ([owner, user]) => {
     const approveTransfer = async (fromAddress, toAddress) => {
@@ -65,9 +65,9 @@ contract('MurAllMarketplace', ([owner, user]) => {
         this.murAllBlockList = await MurAllBlockList.new({ from: owner });
         this.contract = await MurAllMarketplace.new(this.murAllBlockList.address, { from: owner });
         this.paintToken = await PaintToken.new({ from: owner });
-        this.artwrkImageDataStorage = await ArtwrkImageDataStorage.new({ from: owner });
-        this.murAllNFT = await MurAllNFT.new([owner], this.artwrkImageDataStorage.address, { from: owner });
-        await this.artwrkImageDataStorage.transferOwnership(this.murAllNFT.address);
+        this.NftImageDataStorage = await NftImageDataStorage.new({ from: owner });
+        this.murAllNFT = await MurAllNFT.new([owner], this.NftImageDataStorage.address, { from: owner });
+        await this.NftImageDataStorage.transferOwnership(this.murAllNFT.address);
 
         // await this.murAllBlockList.transferOwnership(this.contract.address, { from: owner });
     });

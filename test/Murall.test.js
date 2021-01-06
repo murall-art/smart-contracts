@@ -6,7 +6,7 @@ const MurAll = artifacts.require('./MurAll.sol');
 const MurAllNFT = artifacts.require('./MurAllNFT.sol');
 const PaintToken = artifacts.require('./PaintToken.sol');
 const DataValidator = artifacts.require('./validator/MurAllDataValidator.sol');
-const ArtwrkImageDataStorage = artifacts.require('./storage/ArtwrkImageDataStorage.sol');
+const NftImageDataStorage = artifacts.require('./storage/NftImageDataStorage.sol');
 
 const PRICE_PER_PIXEL = 500000000000000000;
 
@@ -18,9 +18,9 @@ contract('MurAll', ([owner, user]) => {
     };
 
     beforeEach(async () => {
-        this.artwrkImageDataStorage = await ArtwrkImageDataStorage.new({ from: owner });
-        this.murAllNFT = await MurAllNFT.new([owner], this.artwrkImageDataStorage.address, { from: owner });
-        await this.artwrkImageDataStorage.transferOwnership(this.murAllNFT.address);
+        this.NftImageDataStorage = await NftImageDataStorage.new({ from: owner });
+        this.murAllNFT = await MurAllNFT.new([owner], this.NftImageDataStorage.address, { from: owner });
+        await this.NftImageDataStorage.transferOwnership(this.murAllNFT.address);
 
         this.paintToken = await PaintToken.new({ from: owner });
         this.dataValidator = await DataValidator.new({ from: owner });
