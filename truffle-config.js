@@ -24,6 +24,12 @@ module.exports = {
         rinkeby: {
             provider: new HDWalletProvider(MNENOMIC, 'https://rinkeby.infura.io/v3/' + INFURA_API_KEY),
             network_id: 4
+        },
+        mainnet: {
+            provider: new HDWalletProvider(MNENOMIC, 'https://mainnet.infura.io/v3/' + INFURA_API_KEY),
+            network_id: 1,
+            gas: 9524296,
+            gasPrice: 69000000000
         }
     },
     compilers: {

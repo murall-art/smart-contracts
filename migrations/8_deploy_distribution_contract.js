@@ -9,7 +9,5 @@ module.exports = async function (deployer, network, accounts) {
 
     paintTokenInstance = await Token.deployed()
     MerkleDistributorInstance = await MerkleDistributor.deployed()
-    paintTokenInstance.transfer(MerkleDistributorInstance.address, totalTokenToTransferIntoDistributor, {
-        from: accounts[0]
-    })
+    paintTokenInstance.transfer(MerkleDistributorInstance.address, totalTokenToTransferIntoDistributor)
 }
