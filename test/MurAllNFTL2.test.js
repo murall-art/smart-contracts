@@ -10,7 +10,9 @@ contract('MurAllNFTL2', accounts => {
         // Given minted token
 
         const metadata = web3.utils.hexToBytes(
-            '0x49930065f0061848b051b234fc58bd7a43db72fd07512ebb749eddd1a43a7dae000000000000000000000000d48ada39d6d93fc6108e008230ead2329a0d1e0768656c6c6f20776f726c642100000000000000000000000000000000000000000004d200162e0000000000000000000000000000000000000000000000000001'
+            '0x49930065f0061848b051b234fc58bd7a43db72fd07512ebb749eddd1a43a7dae000000000000000000000000' +
+                fromAddress.slice(2).toLowerCase() +
+                '68656c6c6f20776f726c642100000000000000000000000000000000000000000004d200162e0000000000000000000000000000000000000000000000000001'
         )
 
         await contract.methods['mint(address,uint256,bytes)'](fromAddress, tokenId, metadata, {
@@ -39,7 +41,7 @@ contract('MurAllNFTL2', accounts => {
     })
 
     describe('Minting', async () => {
-        it('minting disallowed from account that is not rootChainManagerProxy', async () => {
+        it('minting disallowed from account that is not mintableERC721PredicateProxy', async () => {
             // Given minted token
             const metadata = web3.utils.hexToBytes(
                 '0x49930065f0061848b051b234fc58bd7a43db72fd07512ebb749eddd1a43a7dae000000000000000000000000d48ada39d6d93fc6108e008230ead2329a0d1e0768656c6c6f20776f726c642100000000000000000000000000000000000000000004d200162e0000000000000000000000000000000000000000000000000001'
@@ -48,13 +50,13 @@ contract('MurAllNFTL2', accounts => {
                 contract.methods['mint(address,uint256,bytes)'](accounts[0], 0, metadata, {
                     from: accounts[1]
                 }),
-                'Address is not RootChainManagerProxy'
+                'Address is not MintableERC721PredicateProxy'
             )
 
             assert.isFalse(await contract.exists(0))
         })
 
-        it('mints a new token from rootChainManagerProxy', async () => {
+        it('mints a new token from mintableERC721PredicateProxy', async () => {
             await mintTestToken(accounts[1])
             const firstTokenId = 0
             const expectedHashOfData = '0x49930065f0061848b051b234fc58bd7a43db72fd07512ebb749eddd1a43a7dae'
@@ -63,38 +65,65 @@ contract('MurAllNFTL2', accounts => {
             assert.isTrue(await contract.exists(0))
             assert.equal(await contract.ownerOf(firstTokenId), accounts[1])
             assert.equal(await contract.getArtworkDataHashForId(firstTokenId), expectedHashOfData)
+            assert.equal(await contract.getArtist(firstTokenId), accounts[1])
+            assert.equal(await contract.getName(firstTokenId), 'hello world!')
+            assert.equal(await contract.getNumber(firstTokenId), 1234)
+            assert.equal(await contract.getSeriesId(firstTokenId), 5678)
+        })
+
+        it('mints test data from burned matic token ', async () => {
+            const metadata = web3.utils.hexToBytes(
+                '0xa24b273e5a0ddf2d5990220b8f07303fcb0c391fd978750380eca381ea3d7cfa000000000000000000000000448bc77754c4c2bc35c2d69d3ba91ee9705d784b5241574b000000000000000000000000000000000000000000000000000000000000010000010000000000000000000000000000000000000000000000000001'
+            )
+            const expectedAddress = '0x448BC77754c4c2Bc35c2d69D3bA91Ee9705d784b'
+            const firstTokenId = 1
+
+            await contract.methods['mint(address,uint256,bytes)'](expectedAddress, firstTokenId, metadata, {
+                from: accounts[0]
+            })
+
+            const expectedHashOfData = '0xa24b273e5a0ddf2d5990220b8f07303fcb0c391fd978750380eca381ea3d7cfa'
+
+            assert.equal(await contract.totalSupply(), 1)
+            assert.isTrue(await contract.exists(1))
+            assert.equal(await contract.ownerOf(firstTokenId), expectedAddress)
+            assert.equal(await contract.getArtworkDataHashForId(firstTokenId), expectedHashOfData)
+            assert.equal(await contract.getArtist(firstTokenId), expectedAddress)
+            assert.equal(await contract.getName(firstTokenId), 'RAWK')
+            assert.equal(await contract.getNumber(firstTokenId), 1)
+            assert.equal(await contract.getSeriesId(firstTokenId), 1)
         })
     })
 
     describe('RootChainManager', async () => {
-        it('updateRootChainManager disallowed from account that is not admin', async () => {
+        it('updateMintableERC721PredicateProxy disallowed from account that is not admin', async () => {
             await expectRevert(
-                contract.updateRootChainManager(accounts[1], {
+                contract.updateMintableERC721PredicateProxy(accounts[1], {
                     from: accounts[1]
                 }),
                 'Does not have admin role'
             )
 
-            assert.equal(await contract.rootChainManagerProxy(), accounts[0])
+            assert.equal(await contract.mintableERC721PredicateProxy(), accounts[0])
         })
 
-        it('updateRootChainManager reverts when 0 address is attempted to set', async () => {
+        it('updateMintableERC721PredicateProxy reverts when 0 address is attempted to set', async () => {
             await expectRevert(
-                contract.updateRootChainManager(ZERO_ADDRESS, {
+                contract.updateMintableERC721PredicateProxy(ZERO_ADDRESS, {
                     from: accounts[0]
                 }),
-                'Bad RootChainManagerProxy address'
+                'Bad MintableERC721PredicateProxy address'
             )
 
-            assert.equal(await contract.rootChainManagerProxy(), accounts[0])
+            assert.equal(await contract.mintableERC721PredicateProxy(), accounts[0])
         })
-        it('updateRootChainManager allowed from admin address', async () => {
+        it('updateMintableERC721PredicateProxy allowed from admin address', async () => {
             // Given minted token
-            contract.updateRootChainManager(accounts[1], {
+            contract.updateMintableERC721PredicateProxy(accounts[1], {
                 from: accounts[0]
             })
 
-            assert.equal(await contract.rootChainManagerProxy(), accounts[1])
+            assert.equal(await contract.mintableERC721PredicateProxy(), accounts[1])
         })
     })
 
@@ -156,7 +185,7 @@ contract('MurAllNFTL2', accounts => {
         it('get artist returns correct artist address for minted token', async () => {
             // Given minted token
             await mintTestToken(accounts[1])
-            const expectedArtist = '0xD48aDA39d6d93fC6108e008230Ead2329A0D1E07'
+            const expectedArtist = accounts[1]
             const tokenId = 0
 
             // when getArtist
