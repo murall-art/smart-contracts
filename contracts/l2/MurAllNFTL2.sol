@@ -32,7 +32,7 @@ contract MurAllNFTL2 is ERC721, IMintableERC721, Ownable, AccessControl {
     mapping(uint256 => ArtWork) public artworks;
 
     // keeping it for checking, whether deposit being called by valid address or not
-    address public rootChainManagerProxy;
+    address public mintableERC721PredicateProxy;
 
     /**
      * @dev @notice Base URI for MURALL NFT's off-chain images
@@ -46,8 +46,8 @@ contract MurAllNFTL2 is ERC721, IMintableERC721, Ownable, AccessControl {
 
     /** @dev Checks if sender is childChainManagerProxy
      */
-    modifier onlyRootChainManagerProxy() {
-        require(msg.sender == rootChainManagerProxy, "Address is not RootChainManagerProxy");
+    modifier onlyMintableERC721PredicateProxy() {
+        require(msg.sender == mintableERC721PredicateProxy, "Address is not MintableERC721PredicateProxy");
         _;
     }
 
@@ -55,7 +55,7 @@ contract MurAllNFTL2 is ERC721, IMintableERC721, Ownable, AccessControl {
      * @param _tokenId The token id to check if exists
      */
     modifier onlyExistingTokens(uint256 _tokenId) {
-        require(_tokenId < totalSupply(), INVALID_TOKEN_ID);
+        require(_exists(_tokenId), INVALID_TOKEN_ID);
         _;
     }
 
@@ -68,11 +68,11 @@ contract MurAllNFTL2 is ERC721, IMintableERC721, Ownable, AccessControl {
 
     event ArtworkFilled(uint256 indexed id, bool finished);
 
-    constructor(address _rootChainManagerProxy, address[] memory admins) public ERC721("MurAll L2", "L2MURALL") {
+    constructor(address _mintableERC721PredicateProxy, address[] memory admins) public ERC721("MurAll L2", "L2MURALL") {
         for (uint256 i = 0; i < admins.length; ++i) {
             _setupRole(ADMIN_ROLE, admins[i]);
         }
-        rootChainManagerProxy = _rootChainManagerProxy;
+        mintableERC721PredicateProxy = _mintableERC721PredicateProxy;
     }
 
     /**
@@ -168,10 +168,10 @@ contract MurAllNFTL2 is ERC721, IMintableERC721, Ownable, AccessControl {
 
     // being proxified smart contract, most probably childChainManagerProxy contract's address
     // is not going to change ever, but still, lets keep it
-    function updateRootChainManager(address newRootChainManagerProxy) external onlyAdmin {
-        require(newRootChainManagerProxy != address(0), "Bad RootChainManagerProxy address");
+    function updateMintableERC721PredicateProxy(address newMintableERC721PredicateProxy) external onlyAdmin {
+        require(newMintableERC721PredicateProxy != address(0), "Bad MintableERC721PredicateProxy address");
 
-        rootChainManagerProxy = newRootChainManagerProxy;
+        mintableERC721PredicateProxy = newMintableERC721PredicateProxy;
     }
 
     /**
@@ -184,7 +184,7 @@ contract MurAllNFTL2 is ERC721, IMintableERC721, Ownable, AccessControl {
         address user,
         uint256 tokenId,
         bytes calldata metaData
-    ) external override onlyRootChainManagerProxy {
+    ) external override onlyMintableERC721PredicateProxy {
         _mint(user, tokenId);
 
         setTokenMetadata(tokenId, metaData);
@@ -193,7 +193,7 @@ contract MurAllNFTL2 is ERC721, IMintableERC721, Ownable, AccessControl {
     /**
      * @dev See {IMintableERC721-mint}.
      */
-    function mint(address user, uint256 tokenId) external override onlyRootChainManagerProxy {
+    function mint(address user, uint256 tokenId) external override onlyMintableERC721PredicateProxy {
         _mint(user, tokenId);
     }
 

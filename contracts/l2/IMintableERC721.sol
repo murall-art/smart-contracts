@@ -1,10 +1,7 @@
-
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.6.0;
 
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-
-interface IMintableERC721 is IERC721 {
+interface IMintableERC721 {
     /**
      * @notice called by predicate contract to mint tokens while withdrawing
      * @dev Should be callable only by MintableERC721Predicate
@@ -25,7 +22,11 @@ interface IMintableERC721 is IERC721 {
      * Note : If you're interested in taking token metadata from L2 to L1 during exit, you must
      * implement this method
      */
-    function mint(address user, uint256 tokenId, bytes calldata metaData) external;
+    function mint(
+        address user,
+        uint256 tokenId,
+        bytes calldata metaData
+    ) external;
 
     /**
      * @notice check if token already exists, return true if it does exist
