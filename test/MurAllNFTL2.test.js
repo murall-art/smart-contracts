@@ -4,7 +4,7 @@ const Web3 = require('web3')
 const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'))
 
 const MurAllNFTL2 = artifacts.require('./l2/MurAllNFTL2.sol')
-
+const MetadataDecoder = artifacts.require('./decoder/MetadataDecoder.sol')
 contract('MurAllNFTL2', accounts => {
     const mintTestToken = async (fromAddress, tokenId = 0) => {
         // Given minted token
@@ -23,7 +23,9 @@ contract('MurAllNFTL2', accounts => {
     let contract
 
     beforeEach(async () => {
-        contract = await MurAllNFTL2.new(accounts[0], [accounts[0]], {
+        this.MetadataDecoder = await MetadataDecoder.new({ from: accounts[0] })
+
+        contract = await MurAllNFTL2.new(this.MetadataDecoder.address, accounts[0], [accounts[0]], {
             from: accounts[0]
         })
     })
@@ -95,7 +97,7 @@ contract('MurAllNFTL2', accounts => {
         })
     })
 
-    describe('RootChainManager', async () => {
+    describe('Admin functions', async () => {
         it('updateMintableERC721PredicateProxy disallowed from account that is not admin', async () => {
             await expectRevert(
                 contract.updateMintableERC721PredicateProxy(accounts[1], {
@@ -124,6 +126,31 @@ contract('MurAllNFTL2', accounts => {
             })
 
             assert.equal(await contract.mintableERC721PredicateProxy(), accounts[1])
+        })
+
+        it('does not allow setMetadataDecoder from non admin address', async () => {
+            await expectRevert(
+                contract.setMetadataDecoder('0xCF90AD693aCe601b5B5582C4F95eC7266CDB3eEC', {
+                    from: accounts[1]
+                }),
+                'Does not have admin role'
+            )
+        })
+
+        it('Allows setMetadataDecoder from admin address', async () => {
+            const newMetadataDecoder = await MetadataDecoder.new({
+                from: accounts[0]
+            })
+
+            // when setMetadataEncoder
+            const receipt = await contract.setMetadataDecoder(newMetadataDecoder.address, {
+                from: accounts[0]
+            })
+
+            // Then
+            await expectEvent(receipt, 'NewMetadataDecoderSet', {
+                metadataDecoder: newMetadataDecoder.address
+            })
         })
     })
 
