@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import {IMintableERC721} from "./IMintableERC721.sol";
+import {IMetadataDecoder} from "../decoder/IMetadataDecoder.sol";
 
 /**
  * L2 MurAll NFT contract, with L2 deposit/withdraw functions
@@ -44,6 +45,8 @@ contract MurAllNFTL2 is ERC721, IMintableERC721, Ownable, AccessControl {
      */
     string private viewUriBase;
 
+    IMetadataDecoder private metadataDecoder;
+
     /** @dev Checks if sender is childChainManagerProxy
      */
     modifier onlyMintableERC721PredicateProxy() {
@@ -66,13 +69,19 @@ contract MurAllNFTL2 is ERC721, IMintableERC721, Ownable, AccessControl {
         _;
     }
 
-    event ArtworkFilled(uint256 indexed id, bool finished);
+    //Declare an Event for when a new metadataDecoder is set
+    event NewMetadataDecoderSet(address metadataDecoder);
 
-    constructor(address _mintableERC721PredicateProxy, address[] memory admins) public ERC721("MurAll L2", "L2MURALL") {
+    constructor(
+        IMetadataDecoder _metadataDecoderAddr,
+        address _mintableERC721PredicateProxy,
+        address[] memory admins
+    ) public ERC721("MurAll L2", "L2MURALL") {
         for (uint256 i = 0; i < admins.length; ++i) {
             _setupRole(ADMIN_ROLE, admins[i]);
         }
         mintableERC721PredicateProxy = _mintableERC721PredicateProxy;
+        metadataDecoder = _metadataDecoderAddr;
     }
 
     /**
@@ -174,6 +183,11 @@ contract MurAllNFTL2 is ERC721, IMintableERC721, Ownable, AccessControl {
         mintableERC721PredicateProxy = newMintableERC721PredicateProxy;
     }
 
+    function setMetadataDecoder(IMetadataDecoder newIMetadataDecoder) external onlyAdmin {
+        metadataDecoder = newIMetadataDecoder;
+        emit NewMetadataDecoderSet(address(metadataDecoder));
+    }
+
     /**
      * @dev See {IMintableERC721-mint}.
      *
@@ -209,10 +223,7 @@ contract MurAllNFTL2 is ERC721, IMintableERC721, Ownable, AccessControl {
         // Following is just a default implementation, feel
         // free to define your own encoding/ decoding scheme
         // for L2 -> L1 token metadata transfer
-        (bytes32 dataHash, address artist, uint256 name, uint256 metadata) = abi.decode(
-            data,
-            (bytes32, address, uint256, uint256)
-        );
+        (bytes32 dataHash, address artist, uint256 name, uint256 metadata) = metadataDecoder.decodeMetadata(data);
         ArtWork memory _artwork = ArtWork(dataHash, artist, name, metadata);
         artworks[tokenId] = _artwork;
     }
