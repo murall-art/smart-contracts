@@ -6,11 +6,12 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Metadata.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import {INFTBundle} from "./INFTBundle.sol";
 
 /**
  * Wrapper/Bundler for NFTs
  */
-contract NFTBundle is ERC721, Ownable, AccessControl {
+contract NFTBundle is INFTBundle, ERC721, Ownable, AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     uint256 public constant BUNDLE_LIMIT = 50;
     using Strings for uint256;
@@ -81,7 +82,7 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
      * Only invokable by admin role.
      * @param _tokenUriBase base for the ERC721 tokenURI
      */
-    function setTokenUriBase(string calldata _tokenUriBase) external onlyAdmin {
+    function setTokenUriBase(string calldata _tokenUriBase) external override onlyAdmin {
         // Set the base for metadata tokenURI
         _setBaseURI(_tokenUriBase);
     }
@@ -91,7 +92,7 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
      * Only invokable by admin role.
      * @param _mediaUriBase base for the mediaURI shown in metadata for each NFT Bundle
      */
-    function setMediaUriBase(string calldata _mediaUriBase) external onlyAdmin {
+    function setMediaUriBase(string calldata _mediaUriBase) external override onlyAdmin {
         // Set the base for metadata tokenURI
         mediaUriBase = _mediaUriBase;
     }
@@ -101,7 +102,7 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
      * Only invokable by admin role.
      * @param _viewUriBase base URI for viewing an NFT Bundle
      */
-    function setViewUriBase(string calldata _viewUriBase) external onlyAdmin {
+    function setViewUriBase(string calldata _viewUriBase) external override onlyAdmin {
         // Set the base for metadata tokenURI
         viewUriBase = _viewUriBase;
     }
@@ -111,7 +112,7 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
      * @param _tokenId the Token ID of a previously minted NFT Bundle
      * @return uri the off-chain URI to view the data
      */
-    function viewURI(uint256 _tokenId) public view onlyExistingTokens(_tokenId) returns (string memory uri) {
+    function viewURI(uint256 _tokenId) public override view onlyExistingTokens(_tokenId) returns (string memory uri) {
         uri = string(abi.encodePacked(viewUriBase, _tokenId.toString()));
     }
 
@@ -120,7 +121,7 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
      * @param _tokenId the Token ID of a previously minted NFT Bundle's
      * @return uri the off-chain URI to the NFT Bundle's image
      */
-    function mediaURI(uint256 _tokenId) public view onlyExistingTokens(_tokenId) returns (string memory uri) {
+    function mediaURI(uint256 _tokenId) public override view onlyExistingTokens(_tokenId) returns (string memory uri) {
         uri = string(abi.encodePacked(mediaUriBase, _tokenId.toString()));
     }
 
@@ -130,6 +131,7 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
      */
     function getBundle(uint256 bundleId)
         public
+        override
         view
         onlyExistingTokens(bundleId)
         returns (string memory name, uint256[] memory tokenIds)
@@ -146,6 +148,7 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
      */
     function getBundleTokenIds(uint256 bundleId)
         public
+        override
         view
         onlyExistingTokens(bundleId)
         returns (uint256[] memory tokenIds)
@@ -159,7 +162,13 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
      * @param bundleId the bundle ID of a previously minted bundle
      * @return name the name of the bundle
      */
-    function getBundleName(uint256 bundleId) public view onlyExistingTokens(bundleId) returns (string memory name) {
+    function getBundleName(uint256 bundleId)
+        public
+        override
+        view
+        onlyExistingTokens(bundleId)
+        returns (string memory name)
+    {
         Bundle memory _bundle = bundles[bundleId];
 
         name = bytes32ToString(bytes32(_bundle.name));
@@ -172,6 +181,7 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
      */
     function viewURIsInBundle(uint256 bundleId)
         public
+        override
         view
         onlyExistingTokens(bundleId)
         returns (string memory metadata)
@@ -202,7 +212,7 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
     /*
      * creates a bundle of the given token ids
      */
-    function bundleNfts(uint256 name, uint256[] memory tokenIds) public {
+    function bundleNfts(uint256 name, uint256[] memory tokenIds) public override {
         uint256 len = tokenIds.length;
         require(len <= BUNDLE_LIMIT && len > 0, "bundle size exceeds limit");
         // transfer ownership of nfts to this contract
@@ -224,6 +234,7 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
 
     function setUnlockableContentUri(uint256 bundleId, string memory unlockableContentUri)
         public
+        override
         onlyTokenOwner(bundleId)
     {
         Bundle storage _bundle = bundles[bundleId];
@@ -236,6 +247,7 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
 
     function getUnlockableContentUri(uint256 bundleId)
         public
+        override
         view
         onlyTokenOwner(bundleId)
         returns (string memory unlockableContentUri)
@@ -248,7 +260,7 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
     /*
      * unpacks the bundles, transferring ownership of the individual nfts inside the bundle to the bundle owner before burning the bundle nft
      */
-    function unbundleNfts(uint256 bundleId) public onlyTokenOwner(bundleId) {
+    function unbundleNfts(uint256 bundleId) public override onlyTokenOwner(bundleId) {
         Bundle memory _bundle = bundles[bundleId];
         uint256 len = _bundle.tokenIds.length;
         // transfer ownership of nfts from this contract to the sender address
@@ -263,7 +275,7 @@ contract NFTBundle is ERC721, Ownable, AccessControl {
         emit BundleUnpacked(bundleId);
     }
 
-    function exists(uint256 bundleId) external view returns (bool) {
+    function exists(uint256 bundleId) external override view returns (bool) {
         return _exists(bundleId);
     }
 
