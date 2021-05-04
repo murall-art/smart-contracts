@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.6.0;
 
-import {MurAllNFT} from "./MurAllNFT.sol";
-import {NftImageDataStorage} from "./storage/NftImageDataStorage.sol";
+import {MurAllNFT} from "../MurAllNFT.sol";
+import {NftImageDataStorage} from "../storage/NftImageDataStorage.sol";
 
 /**
  * Mock L2 MurAll NFT for testing

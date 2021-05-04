@@ -3,7 +3,7 @@ const { ZERO_ADDRESS } = constants
 const Web3 = require('web3')
 const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'))
 
-const MurAllNFT = artifacts.require('./MockMurAllNFT.sol')
+const MurAllNFT = artifacts.require('./mock/MockMurAllNFT.sol')
 const NFTBundle = artifacts.require('./bundle/NFTBundle.sol')
 const NftImageDataStorage = artifacts.require('./storage/NftImageDataStorage.sol')
 
