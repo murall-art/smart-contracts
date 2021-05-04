@@ -26,7 +26,7 @@ contract NFTBundle is INFTBundle, ERC721, Ownable, AccessControl {
     }
     Bundle[] bundles;
 
-    IERC721Metadata erc721Contract;
+    IERC721Metadata public erc721Contract;
 
     event BundleCreated(address indexed creator, uint256 indexed bundleTokenId, uint256[] tokenIds);
     event BundleUnlockableUpdated(uint256 indexed bundleTokenId);
