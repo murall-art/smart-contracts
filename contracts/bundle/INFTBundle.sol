@@ -24,6 +24,8 @@ interface INFTBundle {
 
     function setUnlockableContentUri(uint256 bundleId, string memory unlockableContentUri) external;
 
+    function hasUnlockableContentUri(uint256 bundleId) external view returns (bool);
+
     function getUnlockableContentUri(uint256 bundleId) external view returns (string memory unlockableContentUri);
 
     function unbundleNfts(uint256 bundleId) external;

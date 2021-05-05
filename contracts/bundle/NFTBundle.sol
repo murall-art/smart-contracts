@@ -245,6 +245,12 @@ contract NFTBundle is INFTBundle, ERC721, Ownable, AccessControl {
         emit BundleUnlockableUpdated(bundleId);
     }
 
+    function hasUnlockableContentUri(uint256 bundleId) external override view returns (bool) {
+        Bundle memory _bundle = bundles[bundleId];
+        bytes memory uriBytes = bytes(_bundle.unlockableContentUri);
+        return uriBytes.length != 0;
+    }
+
     function getUnlockableContentUri(uint256 bundleId)
         public
         override

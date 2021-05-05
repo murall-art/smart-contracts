@@ -336,6 +336,7 @@ contract('NFTBundle', accounts => {
                 }),
                 ''
             )
+            assert.isFalse(await contract.hasUnlockableContentUri(firstTokenId))
         })
 
         it('setUnlockableContentUri from creator address when creator not owner disallowed', async () => {
@@ -362,6 +363,7 @@ contract('NFTBundle', accounts => {
                 }),
                 ''
             )
+            assert.isFalse(await contract.hasUnlockableContentUri(firstTokenId))
         })
 
         it('setUnlockableContentUri from creator address when creator owns bundle sets unlockable uri', async () => {
@@ -385,6 +387,7 @@ contract('NFTBundle', accounts => {
                 }),
                 uri
             )
+            assert.isTrue(await contract.hasUnlockableContentUri(firstTokenId))
         })
     })
 
