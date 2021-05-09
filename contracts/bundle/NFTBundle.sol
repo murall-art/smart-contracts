@@ -23,6 +23,7 @@ contract NFTBundle is INFTBundle, ERC721, Ownable, AccessControl {
         uint256 name;
         uint256[] tokenIds;
         string unlockableContentUri;
+        string unlockableDescription;
     }
     Bundle[] bundles;
 
@@ -222,7 +223,7 @@ contract NFTBundle is INFTBundle, ERC721, Ownable, AccessControl {
         }
 
         // create the bundle object
-        Bundle memory _bundle = Bundle(msg.sender, name, tokenIds, "");
+        Bundle memory _bundle = Bundle(msg.sender, name, tokenIds, "", "");
 
         // push the bundle to the array
         bundles.push(_bundle);
@@ -232,15 +233,16 @@ contract NFTBundle is INFTBundle, ERC721, Ownable, AccessControl {
         emit BundleCreated(msg.sender, _id, tokenIds);
     }
 
-    function setUnlockableContentUri(uint256 bundleId, string memory unlockableContentUri)
-        public
-        override
-        onlyTokenOwner(bundleId)
-    {
+    function setUnlockableContentUri(
+        uint256 bundleId,
+        string memory unlockableContentUri,
+        string memory unlockableDescription
+    ) public override onlyTokenOwner(bundleId) {
         Bundle storage _bundle = bundles[bundleId];
         require(_bundle.creator == msg.sender, "Address not token creator");
 
         _bundle.unlockableContentUri = unlockableContentUri;
+        _bundle.unlockableDescription = unlockableDescription;
 
         emit BundleUnlockableUpdated(bundleId);
     }
@@ -261,6 +263,17 @@ contract NFTBundle is INFTBundle, ERC721, Ownable, AccessControl {
         Bundle memory _bundle = bundles[bundleId];
 
         return _bundle.unlockableContentUri;
+    }
+
+    function getUnlockableDescription(uint256 bundleId)
+        public
+        override
+        view
+        returns (string memory unlockableDescription)
+    {
+        Bundle memory _bundle = bundles[bundleId];
+
+        return _bundle.unlockableDescription;
     }
 
     /*

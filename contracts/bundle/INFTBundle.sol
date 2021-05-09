@@ -22,11 +22,17 @@ interface INFTBundle {
 
     function bundleNfts(uint256 name, uint256[] memory tokenIds) external;
 
-    function setUnlockableContentUri(uint256 bundleId, string memory unlockableContentUri) external;
+    function setUnlockableContentUri(
+        uint256 bundleId,
+        string memory unlockableContentUri,
+        string memory unlockableDescription
+    ) external;
 
     function hasUnlockableContentUri(uint256 bundleId) external view returns (bool);
 
     function getUnlockableContentUri(uint256 bundleId) external view returns (string memory unlockableContentUri);
+
+    function getUnlockableDescription(uint256 bundleId) external view returns (string memory unlockableDescription);
 
     function unbundleNfts(uint256 bundleId) external;
 
