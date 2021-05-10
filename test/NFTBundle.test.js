@@ -323,9 +323,10 @@ contract('NFTBundle', accounts => {
             await createBundleOfSize(2, name)
 
             const uri = 'some kind of uri'
+            const description = 'some kind of description'
 
             await expectRevert(
-                contract.setUnlockableContentUri(firstTokenId, uri, {
+                contract.setUnlockableContentUri(firstTokenId, uri, description, {
                     from: accounts[0]
                 }),
                 'Address not token owner'
@@ -346,19 +347,26 @@ contract('NFTBundle', accounts => {
             await createBundleOfSize(2, name)
 
             const uri = 'some kind of uri'
+            const description = 'some kind of description'
 
             await contract.transferFrom(accounts[1], accounts[0], firstTokenId, {
                 from: accounts[1]
             })
 
             await expectRevert(
-                contract.setUnlockableContentUri(firstTokenId, uri, {
+                contract.setUnlockableContentUri(firstTokenId, uri, description, {
                     from: accounts[1]
                 }),
                 'Address not token owner'
             )
             assert.equal(
                 await contract.getUnlockableContentUri(firstTokenId, {
+                    from: accounts[0]
+                }),
+                ''
+            )
+            assert.equal(
+                await contract.getUnlockableDescription(firstTokenId, {
                     from: accounts[0]
                 }),
                 ''
@@ -373,8 +381,9 @@ contract('NFTBundle', accounts => {
             await createBundleOfSize(2, name)
 
             const uri = 'some kind of uri'
+            const description = 'some kind of description'
 
-            const receipt = await contract.setUnlockableContentUri(firstTokenId, uri, {
+            const receipt = await contract.setUnlockableContentUri(firstTokenId, uri, description, {
                 from: accounts[1]
             })
 
@@ -386,6 +395,12 @@ contract('NFTBundle', accounts => {
                     from: accounts[1]
                 }),
                 uri
+            )
+            assert.equal(
+                await contract.getUnlockableDescription(firstTokenId, {
+                    from: accounts[1]
+                }),
+                description
             )
             assert.isTrue(await contract.hasUnlockableContentUri(firstTokenId))
         })
