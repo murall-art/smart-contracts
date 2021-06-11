@@ -25,7 +25,6 @@ contract MontageNFTL2 is IMontage, ERC721, AccessControl, IERC2981, IMintableERC
 
     mapping(uint256 => bool) public withdrawnTokens;
 
-    IERC721Metadata public erc721Contract;
     IRoyaltyGovernor public royaltyGovernorContract;
     IMontageMetadataDecoder public montageMetadataDecoder;
     struct MontageData {
@@ -37,7 +36,8 @@ contract MontageNFTL2 is IMontage, ERC721, AccessControl, IERC2981, IMintableERC
         string unlockableContentUri;
         string unlockableDescription;
     }
-    MontageData[] montageDatas;
+
+    mapping(uint256 => MontageData) public montageDatas;
 
     // keeping it for checking, whether deposit being called by valid address or not
     address public mintableERC721PredicateProxy;
@@ -101,14 +101,12 @@ contract MontageNFTL2 is IMontage, ERC721, AccessControl, IERC2981, IMintableERC
         address _mintableERC721PredicateProxy,
         string memory name,
         string memory symbol,
-        IERC721Metadata _NFTAddr,
         IMontageMetadataDecoder _montageMetadataDecoderAddr,
         address[] memory admins
     ) public ERC721(name, symbol) {
         for (uint256 i = 0; i < admins.length; ++i) {
             _setupRole(ADMIN_ROLE, admins[i]);
         }
-        erc721Contract = _NFTAddr;
         montageMetadataDecoder = _montageMetadataDecoderAddr;
         mintableERC721PredicateProxy = _mintableERC721PredicateProxy;
         _registerInterface(_INTERFACE_ID_ERC2981);
@@ -267,27 +265,7 @@ contract MontageNFTL2 is IMontage, ERC721, AccessControl, IERC2981, IMintableERC
         onlyExistingTokens(_tokenId)
         returns (string memory metadata)
     {
-        uint256[] memory tokenIds = getTokenIds(_tokenId);
-        uint256 len = tokenIds.length;
-
-        // start JSON object
-        metadata = strConcat("{\n", '  "uris": [\n');
-
-        // transfer ownership of nfts to this contract
-        for (uint256 i = 0; i < len; i++) {
-            // Media URI
-            metadata = strConcat(metadata, '"');
-            metadata = strConcat(metadata, erc721Contract.tokenURI(tokenIds[i]));
-            metadata = strConcat(metadata, '"');
-            if (i < len - 1) {
-                metadata = strConcat(metadata, ", ");
-            }
-        }
-        //close array
-        metadata = strConcat(metadata, "\n  ]");
-
-        // Finish JSON object
-        metadata = strConcat(metadata, "\n}");
+        revert("viewURIsInMontage: must be called from L2 contract");
     }
 
     /*
