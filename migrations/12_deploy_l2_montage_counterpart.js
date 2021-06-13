@@ -1,5 +1,5 @@
 var MurAllNFT = artifacts.require('./MurAllNFT.sol')
-var MontageNFT = artifacts.require('./montage/MontageNFT.sol')
+var MontageNFT = artifacts.require('./l2/MontageNFTL2.sol')
 var MontageDataStorage = artifacts.require('./storage/MontageDataStorage.sol')
 var RoyaltyGovernor = artifacts.require('./royalties/RoyaltyGovernor.sol')
 var MontageMetadataDecoder = artifacts.require('./encoder/MontageMetadataDecoder.sol')
