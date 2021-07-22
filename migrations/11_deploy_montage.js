@@ -9,7 +9,7 @@ module.exports = async function (deployer, network, accounts) {
 
     await deployer.deploy(
         MontageNFT,
-        'MurAll Montage ',
+        'MurAll Montage',
         'MONTAGE',
         MurAllNFT.address,
         montageDataStorageInstance.address,
