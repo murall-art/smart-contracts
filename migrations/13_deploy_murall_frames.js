@@ -1,5 +1,5 @@
 var MurAllFrame = artifacts.require('./frames/MurAllFrame.sol')
-var FrameTraitStorage = artifacts.require('./frames/MurAllFrame.sol')
+var FrameTraitStorage = artifacts.require('./frames/FrameTraitStorage.sol')
 
 const FXROOT_GOERLI = '0x3d1d3E34f7fB6D26245E6640E1c50710eFFf15bA'
 const FXROOT_ETHEREUM = '0xfe5e5D361b2ad62c541bAb87C45a0B9B018389a2'
