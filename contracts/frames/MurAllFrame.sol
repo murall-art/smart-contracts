@@ -8,16 +8,19 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {FrameTraitStorage} from "./FrameTraitStorage.sol";
+import {IERC2981} from "../royalties/IERC2981.sol";
+import {IRoyaltyGovernor} from "../royalties/IRoyaltyGovernor.sol";
 
 /**
  * MurAll Frame contract
  */
-contract MurAllFrame is ERC721, Ownable, AccessControl, ReentrancyGuard {
+contract MurAllFrame is ERC721, Ownable, AccessControl, ReentrancyGuard, IERC2981 {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     using Strings for uint256;
 
-    FrameTraitStorage traitStorage;
+    FrameTraitStorage public traitStorage;
     uint256 public numFramesMinted;
+    IRoyaltyGovernor public royaltyGovernorContract;
 
     bool internal publicMintingEnabled = false;
 
@@ -145,5 +148,21 @@ contract MurAllFrame is ERC721, Ownable, AccessControl, ReentrancyGuard {
 
     function getTraits(uint256 _tokenId) public view onlyExistingTokens(_tokenId) returns (uint256 traits) {
         return traitStorage.getTraits(_tokenId);
+    }
+
+    function royaltyInfo(
+        uint256 _tokenId,
+        uint256 _value,
+        bytes calldata _data
+    )
+        external
+        override
+        returns (
+            address _receiver,
+            uint256 _royaltyAmount,
+            bytes memory _royaltyPaymentData
+        )
+    {
+        return royaltyGovernorContract.royaltyInfo(_tokenId, _value, _data);
     }
 }
