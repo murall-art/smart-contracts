@@ -17,7 +17,6 @@ contract FrameTraitStorage is Ownable, AccessControl, ReentrancyGuard, FxBaseRoo
     using Strings for uint256;
 
     uint256[] frameTraits;
-    address public murallFrameContractAddress;
 
     event FrameTraitsUpdated(uint256 indexed id, uint256 traits);
 
@@ -63,17 +62,7 @@ contract FrameTraitStorage is Ownable, AccessControl, ReentrancyGuard, FxBaseRoo
         _sendMessageToChild(message);
     }
 
-    function addInitialTrait(uint256 traits) public {
-        require(msg.sender == murallFrameContractAddress, "Only the frame contract can add traits");
+    function addInitialTrait(uint256 traits) public onlyOwner {
         frameTraits.push(traits);
-    }
-
-    function setFrameContract(address _frameContract) public onlyAdmin {
-        require(_frameContract != address(murallFrameContractAddress), "Frame contract already set");
-        require(_frameContract != address(this), "Frame contract cannot be set to itself");
-        require(_frameContract != address(msg.sender), "Frame contract cannot be set to sender");
-        require(_frameContract != address(0), "Frame contract cannot be 0 address");
-
-        murallFrameContractAddress = _frameContract;
     }
 }
