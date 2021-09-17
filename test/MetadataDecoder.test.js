@@ -1,24 +1,8 @@
-const { expectEvent, expectRevert } = require('@openzeppelin/test-helpers')
-const { ZERO_ADDRESS } = require('@openzeppelin/test-helpers/src/constants')
 const Web3 = require('web3')
 const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'))
 
 const MetadataDecoder = artifacts.require('./decoder/MetadataDecoder.sol')
 contract('MetadataDecoder', accounts => {
-    const mintTestToken = async (fromAddress, tokenId = 0) => {
-        // Given minted token
-
-        const metadata = web3.utils.hexToBytes(
-            '0x49930065f0061848b051b234fc58bd7a43db72fd07512ebb749eddd1a43a7dae000000000000000000000000' +
-                fromAddress.slice(2).toLowerCase() +
-                '68656c6c6f20776f726c642100000000000000000000000000000000000000000004d200162e0000000000000000000000000000000000000000000000000001'
-        )
-
-        await contract.methods['mint(address,uint256,bytes)'](fromAddress, tokenId, metadata, {
-            from: accounts[0]
-        })
-    }
-
     let contract
 
     beforeEach(async () => {
