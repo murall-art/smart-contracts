@@ -55,11 +55,12 @@ contract MurAllFrame is ERC721, Ownable, AccessControl, ReentrancyGuard, IERC298
     event FrameMinted(uint256 indexed id, address indexed owner);
     event FrameTraitsUpdated(uint256 indexed id, address indexed owner, uint256 traits);
 
-    constructor(address[] memory admins) public ERC721("MurAll Frame", "FRAME") {
+    constructor(address[] memory admins, FrameTraitStorage _traitStorage) public ERC721("MurAll Frame", "FRAME") {
         for (uint256 i = 0; i < admins.length; ++i) {
             _setupRole(ADMIN_ROLE, admins[i]);
         }
         numFramesMinted = 0;
+        traitStorage = _traitStorage;
     }
 
     function mint() public nonReentrant returns (uint256) {
