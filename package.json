@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "MurAll smart contracts",
   "scripts": {
-    "test": "ganache-cli -p 7545 -q --defaultBalanceEther 100000000 & truffle test --network test",
+    "test": "ganache-cli -p 8545 -q --defaultBalanceEther 100000000 & truffle test --network test",
     "test:coverage": "truffle run coverage",
     "lint": "solium --dir ./contracts",
     "lint:fix": "solium --dir ./contracts --fix",
@@ -12,6 +12,7 @@
   },
   "private": true,
   "dependencies": {
+    "@chainlink/contracts": "^0.2.1",
     "ganache-time-traveler": "^1.0.15",
     "truffle": "^5.1.40"
   },
