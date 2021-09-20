@@ -7,25 +7,37 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {FrameTraitStorage} from "./FrameTraitStorage.sol";
+import {IFrameImageStorage} from "./IFrameImageStorage.sol";
 import {IERC2981} from "../royalties/IERC2981.sol";
 import {IRoyaltyGovernor} from "../royalties/IRoyaltyGovernor.sol";
+import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
 
 /**
  * MurAll Frame contract
  */
-contract MurAllFrame is ERC721, Ownable, AccessControl, ReentrancyGuard, IERC2981 {
+contract MurAllFrame is ERC721, Ownable, AccessControl, ReentrancyGuard, IERC2981, VRFConsumerBase {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     using Strings for uint256;
 
-    FrameTraitStorage public traitStorage;
-    uint256 public numFramesMinted;
+    IFrameImageStorage public traitImageStorage;
     IRoyaltyGovernor public royaltyGovernorContract;
 
     bool internal publicMintingEnabled = false;
+    bool internal presaleMintingEnabled = false;
 
     uint256 constant NUM_LEGENDARIES_MINTABLE = 10;
+    uint256 constant NUM_PRESALE_MINTABLE = 100;
     uint256 constant MAX_SUPPLY = 2100;
+
+    uint256[] internal initialFrameTraits;
+
+    // for chainlink vrf
+    bytes32 internal keyHash;
+    uint256 internal fee;
+    uint256 public traitSeed;
+
+    event RandomnessRequested(bytes32 requestId);
+    event TraitSeedSet(uint256 seed);
 
     /**
      * @dev @notice Base URI for MURALL NFT's off-chain images
@@ -54,33 +66,49 @@ contract MurAllFrame is ERC721, Ownable, AccessControl, ReentrancyGuard, IERC298
 
     event FrameMinted(uint256 indexed id, address indexed owner);
     event FrameTraitsUpdated(uint256 indexed id, address indexed owner, uint256 traits);
+    event RoyaltyGovernorContractChanged(address indexed royaltyGovernor);
+    event FrameTraitImageStorageContractChanged(address indexed traitImageStorage);
 
-    constructor(address[] memory admins, FrameTraitStorage _traitStorage) public ERC721("MurAll Frame", "FRAME") {
+    constructor(
+        address[] memory admins,
+        address _vrfCoordinator,
+        address _linkTokenAddr,
+        bytes32 _keyHash,
+        uint256 _fee
+    ) public ERC721("MurAll Frame", "FRAME") VRFConsumerBase(_vrfCoordinator, _linkTokenAddr) {
         for (uint256 i = 0; i < admins.length; ++i) {
             _setupRole(ADMIN_ROLE, admins[i]);
         }
-        numFramesMinted = 0;
-        traitStorage = _traitStorage;
+
+        keyHash = _keyHash;
+        fee = _fee;
     }
 
-    function mint() public nonReentrant returns (uint256) {
+    function mint() external payable nonReentrant returns (uint256) {
         require(publicMintingEnabled, "Public minting not enabled");
-        require(numFramesMinted < MAX_SUPPLY, "Maximum number of frames minted");
 
-        uint256 _id = numFramesMinted + 1;
+        return mintPrivate();
+    }
 
-        _mint(msg.sender, _id);
-
-        emit FrameMinted(_id, msg.sender);
-        return _id;
+    function mintPresale() external payable nonReentrant returns (uint256) {
+        require(presaleMintingEnabled, "Presale minting not enabled");
+        require(totalSupply() <= NUM_PRESALE_MINTABLE, "Maximum number of presale NFT's reached");
+        return mintPrivate();
     }
 
     function mintLegendary(uint256 traitHash) public nonReentrant onlyAdmin returns (uint256) {
-        require(numFramesMinted < NUM_LEGENDARIES_MINTABLE, "Maximum number of initial NFT's reached");
-        uint256 _id = numFramesMinted + 1;
+        require(totalSupply() <= NUM_LEGENDARIES_MINTABLE, "Maximum number of initial NFT's reached");
+        initialFrameTraits.push(traitHash);
+
+        return mintPrivate();
+    }
+
+    function mintPrivate() private nonReentrant onlyAdmin returns (uint256) {
+        require(totalSupply() <= MAX_SUPPLY, "Maximum number of frames minted");
+
+        uint256 _id = totalSupply();
 
         _mint(msg.sender, _id);
-        traitStorage.addInitialTrait(traitHash);
 
         emit FrameMinted(_id, msg.sender);
         return _id;
@@ -143,13 +171,58 @@ contract MurAllFrame is ERC721, Ownable, AccessControl, ReentrancyGuard, IERC298
         publicMintingEnabled = enabled;
     }
 
-    function setFrameTraitStorage(address storageAddress) public onlyAdmin {
-        traitStorage = FrameTraitStorage(storageAddress);
+    /**
+     * @notice Set the frame trait image storage contract.
+     * Only invokable by admin role.
+     * @param storageAddress the address of the frame trait image storage contract
+     */
+    function setFrameTraitImageStorage(IFrameImageStorage storageAddress) public onlyAdmin {
+        traitImageStorage = IFrameImageStorage(storageAddress);
+        emit FrameTraitImageStorageContractChanged(address(storageAddress));
+    }
+
+    /**
+     * @notice Set the Royalty Governer for creating `tokenURI` for each Montage NFT.
+     * Only invokable by admin role.
+     * @param _royaltyGovAddr the address of the Royalty Governer contract
+     */
+    function setRoyaltyGovernor(IRoyaltyGovernor _royaltyGovAddr) external onlyAdmin {
+        royaltyGovernorContract = _royaltyGovAddr;
+        emit RoyaltyGovernorContractChanged(address(_royaltyGovAddr));
     }
 
     function getTraits(uint256 _tokenId) public view onlyExistingTokens(_tokenId) returns (uint256 traits) {
-        return traitStorage.getTraits(_tokenId);
+        if (_tokenId < NUM_LEGENDARIES_MINTABLE) {
+            return initialFrameTraits[_tokenId];
+        } else {
+            require(traitSeed != 0, "Trait seed not set yet");
+            return generateTraits(traitSeed, _tokenId);
+        }
     }
+
+    function generateTraits(uint256 randomValue, uint256 tokenId) private pure returns (uint256 traits) {
+        return uint256(keccak256(abi.encode(randomValue, tokenId)));
+    }
+
+    /** Chainlink VRF ****************************/
+    function requestTraitSeed() public onlyAdmin nonReentrant {
+        require(traitSeed == 0, "Trait seed already requested");
+        require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK - fill contract with faucet");
+        bytes32 requestId = requestRandomness(keyHash, fee);
+
+        emit RandomnessRequested(requestId);
+    }
+
+    /**
+     * Callback function used by VRF Coordinator
+     */
+    function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
+        require(traitSeed == 0, "Trait seed already requested");
+        traitSeed = randomness;
+        emit TraitSeedSet(randomness);
+    }
+
+    /** END Chainlink VRF ****************************/
 
     function royaltyInfo(
         uint256 _tokenId,
