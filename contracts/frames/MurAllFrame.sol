@@ -265,7 +265,7 @@ contract MurAllFrame is
                 msg.sender,
                 address(this),
                 contentTokenId,
-                abi.encode(_tokenId, msg.sender, contentContractAddress)
+                abi.encode(_tokenId, contentContractAddress)
             );
         } else if (contentContractAddress.supportsInterface(_INTERFACE_ID_ERC1155)) {
             // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
@@ -274,7 +274,7 @@ contract MurAllFrame is
                 address(this),
                 contentTokenId,
                 contentAmount,
-                abi.encode(_tokenId, msg.sender, contentContractAddress)
+                abi.encode(_tokenId, contentContractAddress)
             );
         } else {
             revert();

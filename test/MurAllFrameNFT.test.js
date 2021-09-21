@@ -1,4 +1,4 @@
-const { expectEvent, expectRevert, BN } = require('@openzeppelin/test-helpers')
+const { expectEvent, expectRevert, BN, balance } = require('@openzeppelin/test-helpers')
 const Web3 = require('web3')
 const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:7545'))
 const timeMachine = require('ganache-time-traveler')
@@ -8,13 +8,15 @@ const MockERC1155 = artifacts.require('./mock/MockERC1155.sol')
 const MockERC20 = artifacts.require('./mock/MockERC20.sol')
 const TimeHelper = artifacts.require('./mock/TimeHelper.sol')
 
-contract('MurAllMarketplace', ([owner, user, randomer]) => {
+contract('MurAllFrame', ([owner, user, randomer]) => {
     const to18DP = value => {
         return new BN(value).mul(new BN('10').pow(new BN('18')))
     }
     const ONE_MILLION_TOKENS = to18DP('1000000')
     const SECONDS_IN_1_DAY = 86400 //86400 seconds in a day
-
+    const MINT_MODE_DEVELOPMENT = 0
+    const MINT_MODE_PUBLIC = 2
+    const MINT_MODE_PRESALE = 1
     const VRF_COORDINATOR_RINKEBY = '0x8C7382F9D8f56b33781fE506E897a4F1e2d17255'
     const LINK_TOKEN_RINKEBY = '0x326C977E6efc84E512bB9C30f76E30c160eD06FB'
     const KEYHASH_RINKEBY = '0x6e75b569a01ef56d18cab6a8e71e6600d6ce853834d4a5748b720d06f878b3a4'
@@ -121,13 +123,39 @@ contract('MurAllMarketplace', ([owner, user, randomer]) => {
                 'Public minting not enabled'
             )
         })
-        
+
         it('presale minting disallowed when presale minting flag is false', async () => {
             await expectRevert(
-                contract.mintPresale({
+                contract.mintPresale(1, randomer, [], {
                     from: randomer
                 }),
                 'Presale minting not enabled'
+            )
+        })
+
+        it('presale minting disallowed when value passed is less than presale minting value', async () => {
+            contract.setMintingMode(MINT_MODE_PRESALE, {
+                from: owner
+            })
+            await expectRevert(
+                contract.mintPresale(1, randomer, [], {
+                    from: randomer
+                }),
+                'Insufficient funds'
+            )
+        })
+
+        it('presale minting disallowed when value passed is less than presale minting value', async () => {
+            contract.setMintingMode(MINT_MODE_PRESALE, {
+                from: owner
+            })
+            
+            await expectRevert(
+                contract.mintPresale(1, randomer, [], {
+                    from: user,
+                    value: web3.utils.toWei('0.15', 'ether')
+                }),
+                'Account is not the presale account'
             )
         })
     })

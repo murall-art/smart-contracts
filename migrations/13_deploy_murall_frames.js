@@ -7,8 +7,8 @@ const VRF_COORDINATOR_MAINNET = '0x3d2341ADb2D31f1c5530cDC622016af293177AE0'
 
 const KEYHASH_RINKEBY = '0x6e75b569a01ef56d18cab6a8e71e6600d6ce853834d4a5748b720d06f878b3a4'
 const KEYHASH_MAINNET = '0xf86195cf7690c55907b2b611ebb7343a6f649bff128701cc542f0569e2c549da'
-const FEE_RINKEBY = 100000000000000000 // 0.1 * 10**18 LINK for test chain
-const FEE_MAINNET = 2000000000000000000 // 2 * 10**18  LINK cost for Ethereum
+const FEE_RINKEBY = '100000000000000000' // 0.1 * 10**18 LINK for test chain
+const FEE_MAINNET = '2000000000000000000' // 2 * 10**18  LINK cost for Ethereum
 
 module.exports = async function (deployer, network, accounts) {
     const linkTokenAddress = network == 'mainnet' ? LINK_TOKEN_MAINNET : LINK_TOKEN_RINKEBY
@@ -26,7 +26,7 @@ module.exports = async function (deployer, network, accounts) {
         vrfAddress,
         linkTokenAddress,
         keyhash,
-        fee
+        BigInt(fee)
     )
 
     MurAllFrameInstance = await MurAllFrame.deployed()
