@@ -21,7 +21,33 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
     const LINK_TOKEN_RINKEBY = '0x326C977E6efc84E512bB9C30f76E30c160eD06FB'
     const KEYHASH_RINKEBY = '0x6e75b569a01ef56d18cab6a8e71e6600d6ce853834d4a5748b720d06f878b3a4'
     const FEE_RINKEBY = '100000000000000000' // 0.1 * 10**18 LINK for test chain
-
+    const merkleData = {
+        merkleRoot: '0x53a727f718138b0a08d032346812ae97b7c5dbf4d1a4f1da857c4d7dadff776c',
+        tokenTotal: '0x03',
+        claims: {
+            '0x05dC289004121f99cd304Dc81897Ad2d4e534891': {
+                index: 0,
+                amount: '0x01',
+                proof: [
+                    '0x786d1d729082a078b96bf9b3b620f90d94b1a2a90cb53f7b40207176602cad26',
+                    '0xe1aa9f70c713fd69cbc021cbb0505a48e85e379c5eb310b4ae9b9e5ea2b4209b'
+                ]
+            },
+            '0x75E9a490D61f5eBCfFcB3d72391035d8D3a3AdbE': {
+                index: 1,
+                amount: '0x01',
+                proof: ['0xfa99f9a5da53d341ca5ff589e76f1958fc19b395b09a89f15ed42d46aba41630']
+            },
+            '0xD48f118342ef5B50eF4Fa963554B552bfbFAE1d2': {
+                index: 2,
+                amount: '0x01',
+                proof: [
+                    '0xac99f3534f8c759fa3345208ba6eca73130d96f6754546c898156262d09a34d3',
+                    '0xe1aa9f70c713fd69cbc021cbb0505a48e85e379c5eb310b4ae9b9e5ea2b4209b'
+                ]
+            }
+        }
+    }
     const approveERC721Transfer = async (fromAddress, toAddress) => {
         await this.mockERC721.setApprovalForAll(toAddress, true, {
             from: fromAddress
@@ -124,6 +150,44 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             )
         })
 
+        it('public minting disallowed when no value passed', async () => {
+            contract.setMintingMode(MINT_MODE_PUBLIC, {
+                from: owner
+            })
+            await expectRevert(
+                contract.mint({
+                    from: randomer
+                }),
+                'Insufficient funds'
+            )
+        })
+
+        it('public minting disallowed when value passed is less than public minting value', async () => {
+            contract.setMintingMode(MINT_MODE_PUBLIC, {
+                from: owner
+            })
+            await expectRevert(
+                contract.mint({
+                    from: randomer,
+                    value: web3.utils.toWei('0.2499999999', 'ether')
+                }),
+                'Insufficient funds'
+            )
+        })
+
+        it('public minting allowed when value passed is equal to public minting value', async () => {
+            contract.setMintingMode(MINT_MODE_PUBLIC, {
+                from: owner
+            })
+
+            await contract.mint({
+                from: randomer,
+                value: web3.utils.toWei('0.25', 'ether')
+            })
+
+            assert.equal(await contract.ownerOf(0), randomer)
+        })
+
         it('presale minting disallowed when presale minting flag is false', async () => {
             await expectRevert(
                 contract.mintPresale(1, randomer, [], {
@@ -133,7 +197,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             )
         })
 
-        it('presale minting disallowed when value passed is less than presale minting value', async () => {
+        it('presale minting disallowed when no value is passed', async () => {
             contract.setMintingMode(MINT_MODE_PRESALE, {
                 from: owner
             })
@@ -149,7 +213,20 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             contract.setMintingMode(MINT_MODE_PRESALE, {
                 from: owner
             })
-            
+            await expectRevert(
+                contract.mintPresale(1, randomer, [], {
+                    from: randomer,
+                    value: web3.utils.toWei('0.149999999999', 'ether')
+                }),
+                'Insufficient funds'
+            )
+        })
+
+        it('presale minting disallowed account passed does not match account used for transaction', async () => {
+            contract.setMintingMode(MINT_MODE_PRESALE, {
+                from: owner
+            })
+
             await expectRevert(
                 contract.mintPresale(1, randomer, [], {
                     from: user,
@@ -157,6 +234,38 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                 }),
                 'Account is not the presale account'
             )
+        })
+        it('presale minting disallowed account when proofs do not match', async () => {
+            contract.setMintingMode(MINT_MODE_PRESALE, {
+                from: owner
+            })
+            contract.setPresaleMintingMerkleRoot(merkleData.merkleRoot, {
+                from: owner
+            })
+
+            await expectRevert(
+                contract.mintPresale(1, randomer, [], {
+                    from: randomer,
+                    value: web3.utils.toWei('0.15', 'ether')
+                }),
+                'Invalid proof.'
+            )
+        })
+
+        it('presale minting allowed when account passed matches account used for transaction and proofs match', async () => {
+            contract.setMintingMode(MINT_MODE_PRESALE, {
+                from: owner
+            })
+            contract.setPresaleMintingMerkleRoot(merkleData.merkleRoot, {
+                from: owner
+            })
+            const claimData = merkleData.claims[randomer]
+
+            await contract.mintPresale(claimData.index, randomer, claimData.proof, {
+                from: randomer,
+                value: web3.utils.toWei('0.15', 'ether')
+            })
+            assert.equal(await contract.ownerOf(0), randomer)
         })
     })
 })

@@ -64,16 +64,16 @@ contract MurAllFrame is
     IRoyaltyGovernor public royaltyGovernorContract;
     MerkleTokenClaimDataManager public presaleManager;
 
-    uint256 constant MINT_MODE_DEVELOPMENT = 0;
-    uint256 constant MINT_MODE_PUBLIC = 2;
-    uint256 constant MINT_MODE_PRESALE = 1;
+    uint256 public constant MINT_MODE_DEVELOPMENT = 0;
+    uint256 public constant MINT_MODE_PUBLIC = 2;
+    uint256 public constant MINT_MODE_PRESALE = 1;
     uint256 public mintMode = MINT_MODE_DEVELOPMENT;
 
-    uint256 constant NUM_LEGENDARIES_MINTABLE = 200;
-    uint256 constant NUM_PRESALE_MINTABLE = 700;
-    uint256 constant MINT_PRICE_PRESALE = 0.15 ether;
-    uint256 constant MINT_PRICE_PUBLIC = 0.25 ether;
-    uint256 constant MAX_SUPPLY = 2100;
+    uint256 public constant NUM_LEGENDARIES_MINTABLE = 200;
+    uint256 public constant NUM_PRESALE_MINTABLE = 700;
+    uint256 public constant MINT_PRICE_PRESALE = 0.15 ether;
+    uint256 public constant MINT_PRICE_PUBLIC = 0.25 ether;
+    uint256 public constant MAX_SUPPLY = 2100;
 
     mapping(uint256 => uint256) private customFrameTraits;
 
@@ -110,6 +110,7 @@ contract MurAllFrame is
     event FrameContentsRemoved(uint256 indexed id);
     event RoyaltyGovernorContractChanged(address indexed royaltyGovernor);
     event FrameTraitImageStorageContractChanged(address indexed traitImageStorage);
+    event ValueMint(uint256 value);
 
     constructor(
         address[] memory admins,
