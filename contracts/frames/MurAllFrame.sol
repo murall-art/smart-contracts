@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/introspection/ERC165Checker.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Receiver.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -22,7 +21,6 @@ import {MerkleTokenClaimDataManager} from "../distribution/MerkleTokenClaimDataM
  */
 contract MurAllFrame is
     ERC721,
-    Ownable,
     AccessControl,
     ReentrancyGuard,
     IERC2981,
@@ -65,8 +63,11 @@ contract MurAllFrame is
     IFrameImageStorage public traitImageStorage;
     IRoyaltyGovernor public royaltyGovernorContract;
     MerkleTokenClaimDataManager public presaleManager;
-    bool internal publicMintingEnabled = false;
-    bool internal presaleMintingEnabled = false;
+
+    uint256 constant MINT_MODE_DEVELOPMENT = 0;
+    uint256 constant MINT_MODE_PUBLIC = 2;
+    uint256 constant MINT_MODE_PRESALE = 1;
+    uint256 public mintMode = MINT_MODE_DEVELOPMENT;
 
     uint256 constant NUM_LEGENDARIES_MINTABLE = 10;
     uint256 constant NUM_PRESALE_MINTABLE = 100;
@@ -89,16 +90,6 @@ contract MurAllFrame is
 
     event RandomnessRequested(bytes32 requestId);
     event TraitSeedSet(uint256 seed);
-
-    /**
-     * @dev @notice Base URI for MURALL NFT's off-chain images
-     */
-    string private mediaUriBase;
-
-    /**
-     * @dev @notice Base URI to view MURALL NFT's on the MurAll website
-     */
-    string private viewUriBase;
 
     /** @dev check supports erc721 or erc1155 using eip165
      * @param tokenContractAddress Contract address to check if is ERC721 or ERC1155
@@ -162,9 +153,16 @@ contract MurAllFrame is
     }
 
     function mint() external payable nonReentrant returns (uint256) {
-        require(publicMintingEnabled, "Public minting not enabled");
+        require(mintMode == MINT_MODE_PUBLIC, "Public minting not enabled");
 
-        return mintPrivate();
+        require(totalSupply() <= MAX_SUPPLY, "Maximum number of frames minted");
+
+        uint256 _id = totalSupply();
+
+        _mint(msg.sender, _id);
+
+        emit FrameMinted(_id, msg.sender);
+        return _id;
     }
 
     function mintPresale(
@@ -172,24 +170,27 @@ contract MurAllFrame is
         address account,
         bytes32[] calldata merkleProof
     ) external payable nonReentrant returns (uint256) {
-        require(presaleMintingEnabled, "Presale minting not enabled");
+        require(mintMode == MINT_MODE_PRESALE, "Presale minting not enabled");
         require(totalSupply() <= NUM_PRESALE_MINTABLE, "Maximum number of presale NFT's reached");
         require(msg.sender == account, "Account is not the presale account");
         require(!presaleManager.hasClaimed(index), "Address already minted.");
 
         // Verify the merkle proof.
         presaleManager.verifyAndSetClaimed(index, account, uint256(1), merkleProof);
-        return mintPrivate();
+        require(totalSupply() <= MAX_SUPPLY, "Maximum number of frames minted");
+
+        uint256 _id = totalSupply();
+
+        _mint(msg.sender, _id);
+
+        emit FrameMinted(_id, msg.sender);
+        return _id;
     }
 
     function mintLegendary(uint256 traitHash) public nonReentrant onlyAdmin returns (uint256) {
         require(totalSupply() <= NUM_LEGENDARIES_MINTABLE, "Maximum number of initial NFT's reached");
         initialFrameTraits.push(traitHash);
 
-        return mintPrivate();
-    }
-
-    function mintPrivate() private nonReentrant onlyAdmin returns (uint256) {
         require(totalSupply() <= MAX_SUPPLY, "Maximum number of frames minted");
 
         uint256 _id = totalSupply();
@@ -210,59 +211,101 @@ contract MurAllFrame is
         _setBaseURI(_tokenUriBase);
     }
 
-    /**
-     * @notice Set the base URI for the image of each MURALL NFT.
-     * Only invokable by admin role.
-     * @param _mediaUriBase base for the mediaURI shown in metadata for each MURALL NFT
-     */
-    function setMediaUriBase(string calldata _mediaUriBase) external onlyAdmin {
-        // Set the base for metadata tokenURI
-        mediaUriBase = _mediaUriBase;
-    }
-
-    /**
-     * @notice Set the base URI for the viewing the MURALL NFT on the MurAll website.
-     * Only invokable by admin role.
-     * @param _viewUriBase base URI for viewing an MURALL NFT on the MurAll website
-     */
-    function setViewUriBase(string calldata _viewUriBase) external onlyAdmin {
-        // Set the base for metadata tokenURI
-        viewUriBase = _viewUriBase;
-    }
-
-    /**
-     * @notice Get view URI for a given MURALL NFT's Token ID.
-     * @param _tokenId the Token ID of a previously minted MURALL NFT
-     * @return uri the off-chain URI to view the Avastar on the MurAll website
-     */
-    function viewURI(uint256 _tokenId) public view onlyExistingTokens(_tokenId) returns (string memory uri) {
-        uri = string(abi.encodePacked(viewUriBase, _tokenId.toString()));
-    }
-
-    /**
-     * @notice Get media URI for a given MURALL NFT's Token ID.
-     * @param _tokenId the Token ID of a previously minted MURALL NFT's
-     * @return uri the off-chain URI to the MURALL NFT's image
-     */
-    function mediaURI(uint256 _tokenId) public view onlyExistingTokens(_tokenId) returns (string memory uri) {
-        uri = string(abi.encodePacked(mediaUriBase, _tokenId.toString()));
-    }
-
     function rescueTokens(address tokenAddress) public onlyAdmin {
         uint256 balance = IERC20(tokenAddress).balanceOf(address(this));
         require(IERC20(tokenAddress).transfer(msg.sender, balance), "MurAllFrame: Transfer failed.");
     }
 
-    function setPublicMintingEnabled(bool enabled) public onlyAdmin {
-        publicMintingEnabled = enabled;
-    }
-
-    function setPresaleMintingEnabled(bool enabled) public onlyAdmin {
-        presaleMintingEnabled = enabled;
+    function setMintingMode(uint256 mode) public onlyAdmin {
+        require(mode == MINT_MODE_PRESALE || mode == MINT_MODE_PUBLIC || mode == MINT_MODE_DEVELOPMENT, "Invalid mode");
+        mintMode = mode;
     }
 
     function setPresaleMintingMerkleRoot(bytes32 merkleRoot) public onlyAdmin {
         presaleManager = new MerkleTokenClaimDataManager(merkleRoot);
+    }
+
+    /**
+     * @notice Set the frame trait image storage contract.
+     * Only invokable by admin role.
+     * @param storageAddress the address of the frame trait image storage contract
+     */
+    function setFrameTraitImageStorage(IFrameImageStorage storageAddress) public onlyAdmin {
+        traitImageStorage = IFrameImageStorage(storageAddress);
+        emit FrameTraitImageStorageContractChanged(address(storageAddress));
+    }
+
+    /**
+     * @notice Set the Royalty Governer for creating `tokenURI` for each Montage NFT.
+     * Only invokable by admin role.
+     * @param _royaltyGovAddr the address of the Royalty Governer contract
+     */
+    function setRoyaltyGovernor(IRoyaltyGovernor _royaltyGovAddr) external onlyAdmin {
+        royaltyGovernorContract = _royaltyGovAddr;
+        emit RoyaltyGovernorContractChanged(address(_royaltyGovAddr));
+    }
+
+    function getTraits(uint256 _tokenId) public view onlyExistingTokens(_tokenId) returns (uint256 traits) {
+        if (_tokenId < NUM_LEGENDARIES_MINTABLE) {
+            return initialFrameTraits[_tokenId];
+        } else {
+            require(traitSeed != 0, "Trait seed not set yet");
+            return uint256(keccak256(abi.encode(traitSeed, _tokenId)));
+        }
+    }
+
+    function setFrameContents(
+        uint256 _tokenId,
+        address contentContractAddress,
+        uint256 contentTokenId,
+        uint256 contentAmount
+    ) public onlyTokenOwner(_tokenId) onlySupportedNfts(contentContractAddress) {
+        require(!hasContentsInFrame(_tokenId), "Frame already contains an NFT"); // Also checks token exists
+        // use contract address to get contract instance as ERC721 instance
+        if (contentContractAddress.supportsInterface(_INTERFACE_ID_ERC721)) {
+            // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
+            IERC721(contentContractAddress).safeTransferFrom(
+                msg.sender,
+                address(this),
+                contentTokenId,
+                abi.encode(_tokenId, msg.sender, contentContractAddress)
+            );
+        } else {
+            // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
+            IERC1155(contentContractAddress).safeTransferFrom(
+                msg.sender,
+                address(this),
+                contentTokenId,
+                contentAmount,
+                abi.encode(_tokenId, msg.sender, contentContractAddress)
+            );
+        }
+    }
+
+    function removeFrameContents(uint256 _tokenId) public onlyTokenOwner(_tokenId) {
+        require(hasContentsInFrame(_tokenId), "Frame does not contain an NFT"); // Also checks token exists
+        FrameContents memory _frameContents = frameContents[_tokenId];
+        if (_frameContents.contractAddress.supportsInterface(_INTERFACE_ID_ERC721)) {
+            // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
+            IERC721(_frameContents.contractAddress).safeTransferFrom(address(this), msg.sender, _frameContents.tokenId);
+        } else {
+            // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
+            IERC1155(_frameContents.contractAddress).safeTransferFrom(
+                address(this),
+                msg.sender,
+                _frameContents.tokenId,
+                _frameContents.amount,
+                ""
+            );
+        }
+
+        delete frameContents[_tokenId];
+        emit FrameContentsRemoved(_tokenId);
+    }
+
+    function hasContentsInFrame(uint256 _tokenId) public view onlyExistingTokens(_tokenId) returns (bool) {
+        // if seller profile does not exist, create one
+        return frameContents[_tokenId].contractAddress != address(0);
     }
 
     /**
@@ -335,93 +378,6 @@ contract MurAllFrame is
         bytes memory
     ) public virtual override returns (bytes4) {
         revert();
-    }
-
-    function setFrameContents(
-        uint256 _tokenId,
-        address contentContractAddress,
-        uint256 contentTokenId,
-        uint256 contentAmount
-    ) public onlyTokenOwner(_tokenId) onlySupportedNfts(contentContractAddress) {
-        require(!hasContentsInFrame(_tokenId), "Frame already contains an NFT"); // Also checks token exists
-        // use contract address to get contract instance as ERC721 instance
-        if (contentContractAddress.supportsInterface(_INTERFACE_ID_ERC721)) {
-            // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
-            IERC721(contentContractAddress).safeTransferFrom(
-                msg.sender,
-                address(this),
-                contentTokenId,
-                abi.encode(_tokenId, msg.sender, contentContractAddress)
-            );
-        } else {
-            // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
-            IERC1155(contentContractAddress).safeTransferFrom(
-                msg.sender,
-                address(this),
-                contentTokenId,
-                contentAmount,
-                abi.encode(_tokenId, msg.sender, contentContractAddress)
-            );
-        }
-    }
-
-    function removeFrameContents(uint256 _tokenId) public onlyTokenOwner(_tokenId) {
-        require(hasContentsInFrame(_tokenId), "Frame does not contain an NFT"); // Also checks token exists
-        FrameContents memory _frameContents = frameContents[_tokenId];
-        if (_frameContents.contractAddress.supportsInterface(_INTERFACE_ID_ERC721)) {
-            // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
-            IERC721(_frameContents.contractAddress).safeTransferFrom(address(this), msg.sender, _frameContents.tokenId);
-        } else {
-            // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
-            IERC1155(_frameContents.contractAddress).safeTransferFrom(
-                address(this),
-                msg.sender,
-                _frameContents.tokenId,
-                _frameContents.amount,
-                ""
-            );
-        }
-
-        delete frameContents[_tokenId];
-        emit FrameContentsRemoved(_tokenId);
-    }
-
-    function hasContentsInFrame(uint256 _tokenId) public view onlyExistingTokens(_tokenId) returns (bool) {
-        // if seller profile does not exist, create one
-        return frameContents[_tokenId].contractAddress != address(0);
-    }
-
-    /**
-     * @notice Set the frame trait image storage contract.
-     * Only invokable by admin role.
-     * @param storageAddress the address of the frame trait image storage contract
-     */
-    function setFrameTraitImageStorage(IFrameImageStorage storageAddress) public onlyAdmin {
-        traitImageStorage = IFrameImageStorage(storageAddress);
-        emit FrameTraitImageStorageContractChanged(address(storageAddress));
-    }
-
-    /**
-     * @notice Set the Royalty Governer for creating `tokenURI` for each Montage NFT.
-     * Only invokable by admin role.
-     * @param _royaltyGovAddr the address of the Royalty Governer contract
-     */
-    function setRoyaltyGovernor(IRoyaltyGovernor _royaltyGovAddr) external onlyAdmin {
-        royaltyGovernorContract = _royaltyGovAddr;
-        emit RoyaltyGovernorContractChanged(address(_royaltyGovAddr));
-    }
-
-    function getTraits(uint256 _tokenId) public view onlyExistingTokens(_tokenId) returns (uint256 traits) {
-        if (_tokenId < NUM_LEGENDARIES_MINTABLE) {
-            return initialFrameTraits[_tokenId];
-        } else {
-            require(traitSeed != 0, "Trait seed not set yet");
-            return generateTraits(traitSeed, _tokenId);
-        }
-    }
-
-    function generateTraits(uint256 randomValue, uint256 tokenId) private pure returns (uint256 traits) {
-        return uint256(keccak256(abi.encode(randomValue, tokenId)));
     }
 
     /** Chainlink VRF ****************************/
