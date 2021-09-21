@@ -15,6 +15,7 @@ import {IFrameImageStorage} from "./IFrameImageStorage.sol";
 import {IERC2981} from "../royalties/IERC2981.sol";
 import {IRoyaltyGovernor} from "../royalties/IRoyaltyGovernor.sol";
 import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
+import {MerkleTokenClaimDataManager} from "../distribution/MerkleTokenClaimDataManager.sol";
 
 /**
  * MurAll Frame contract
@@ -63,7 +64,7 @@ contract MurAllFrame is
 
     IFrameImageStorage public traitImageStorage;
     IRoyaltyGovernor public royaltyGovernorContract;
-
+    MerkleTokenClaimDataManager public presaleManager;
     bool internal publicMintingEnabled = false;
     bool internal presaleMintingEnabled = false;
 
@@ -166,9 +167,18 @@ contract MurAllFrame is
         return mintPrivate();
     }
 
-    function mintPresale() external payable nonReentrant returns (uint256) {
+    function mintPresale(
+        uint256 index,
+        address account,
+        bytes32[] calldata merkleProof
+    ) external payable nonReentrant returns (uint256) {
         require(presaleMintingEnabled, "Presale minting not enabled");
         require(totalSupply() <= NUM_PRESALE_MINTABLE, "Maximum number of presale NFT's reached");
+        require(msg.sender == account, "Account is not the presale account");
+        require(!presaleManager.hasClaimed(index), "Address already minted.");
+
+        // Verify the merkle proof.
+        presaleManager.verifyAndSetClaimed(index, account, uint256(1), merkleProof);
         return mintPrivate();
     }
 
@@ -249,6 +259,10 @@ contract MurAllFrame is
 
     function setPresaleMintingEnabled(bool enabled) public onlyAdmin {
         presaleMintingEnabled = enabled;
+    }
+
+    function setPresaleMintingMerkleRoot(bytes32 merkleRoot) public onlyAdmin {
+        presaleManager = new MerkleTokenClaimDataManager(merkleRoot);
     }
 
     /**
