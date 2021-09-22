@@ -159,6 +159,91 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             )
         })
 
+        it('presale minting disallowed when merkle root has not been set', async () => {
+            contract.setMintingMode(MINT_MODE_PRESALE, {
+                from: owner
+            })
+
+            await expectRevert(
+                contract.mintPresale(1, randomer, [], {
+                    from: randomer,
+                    value: web3.utils.toWei('0.15', 'ether')
+                }),
+                'Merkle root not set'
+            )
+        })
+
+        it('initial minting disallowed from non-admin account', async () => {
+            await expectRevert(
+                contract.mintInitial(1, {
+                    from: randomer
+                }),
+                'Does not have admin role'
+            )
+        })
+
+        it('initial minting with custom traits disallowed from non-admin account', async () => {
+            await expectRevert(
+                contract.mintCustomInitial([1], {
+                    from: randomer
+                }),
+                'Does not have admin role'
+            )
+        })
+
+        describe('Initial minting', async () => {
+            beforeEach(async () => {
+                contract.setMintingMode(MINT_MODE_DEVELOPMENT, {
+                    from: owner
+                })
+            })
+
+            it('mintCustomInitial mints NFT with given traits', async () => {
+                assert.equal(await contract.balanceOf(owner), 0)
+                const expectedTokenId = 0
+                const expectedTokenId2 = 1
+                const traits = 1234
+                const traits2 = 5678
+                const receipt = await contract.mintCustomInitial([traits, traits2], {
+                    from: owner
+                })
+
+                await expectEvent(receipt, 'FrameMinted', {
+                    id: '0',
+                    owner: owner
+                })
+                await expectEvent(receipt, 'FrameMinted', {
+                    id: '1',
+                    owner: owner
+                })
+                assert.equal(await contract.balanceOf(owner), 2)
+                assert.equal(await contract.ownerOf(expectedTokenId), owner)
+                assert.equal(await contract.ownerOf(expectedTokenId2), owner)
+                assert.equal(await contract.getTraits(expectedTokenId), traits)
+                assert.equal(await contract.getTraits(expectedTokenId2), traits2)
+            })
+
+            it('mintInitial mints amount of NFTs specified', async () => {
+                assert.equal(await contract.balanceOf(owner), 0)
+
+                const mintAmount = 4
+
+                const receipt = await contract.mintInitial(mintAmount, {
+                    from: owner
+                })
+                assert.equal(await contract.balanceOf(owner), mintAmount)
+
+                for (let tokenId = 0; tokenId < mintAmount; tokenId++) {
+                    await expectEvent(receipt, 'FrameMinted', {
+                        id: tokenId.toString(),
+                        owner: owner
+                    })
+
+                    assert.equal(await contract.ownerOf(tokenId), owner)
+                }
+            })
+        })
+
         describe('Public minting', async () => {
             beforeEach(async () => {
                 contract.setMintingMode(MINT_MODE_PUBLIC, {
@@ -186,11 +271,18 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             })
 
             it('public minting allowed when value passed is equal to public minting value', async () => {
-                await contract.mint({
+                assert.equal(await contract.balanceOf(randomer), 0)
+
+                const receipt = await contract.mint({
                     from: randomer,
                     value: web3.utils.toWei('0.25', 'ether')
                 })
 
+                await expectEvent(receipt, 'FrameMinted', {
+                    id: '0',
+                    owner: randomer
+                })
+                assert.equal(await contract.balanceOf(randomer), 1)
                 assert.equal(await contract.ownerOf(0), randomer)
             })
         })
@@ -247,9 +339,14 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                 const claimData = merkleData.claims[randomer]
 
                 assert.equal(await contract.balanceOf(randomer), 0)
-                await contract.mintPresale(claimData.index, randomer, claimData.proof, {
+                const receipt = await contract.mintPresale(claimData.index, randomer, claimData.proof, {
                     from: randomer,
                     value: web3.utils.toWei('0.15', 'ether')
+                })
+
+                await expectEvent(receipt, 'FrameMinted', {
+                    id: '0',
+                    owner: randomer
                 })
                 assert.equal(await contract.balanceOf(randomer), 1)
                 assert.equal(await contract.ownerOf(0), randomer)
