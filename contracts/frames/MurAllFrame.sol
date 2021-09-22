@@ -83,7 +83,7 @@ contract MurAllFrame is
         uint256 amount;
     }
 
-    mapping(uint256 => FrameContents) private frameContents;
+    mapping(uint256 => FrameContents) public frameContents;
 
     // for chainlink vrf
     bytes32 internal keyHash;
@@ -97,6 +97,14 @@ contract MurAllFrame is
      */
     modifier onlyAdmin() {
         require(hasRole(ADMIN_ROLE, msg.sender), "Does not have admin role");
+        _;
+    }
+
+    /** @dev Checks if token exists
+     * @param _tokenId The token id to check if exists
+     */
+    modifier onlyExistingTokens(uint256 _tokenId) {
+        require(_exists(_tokenId), "Invalid Token ID");
         _;
     }
 
@@ -244,8 +252,7 @@ contract MurAllFrame is
         emit RoyaltyGovernorContractChanged(address(_royaltyGovAddr));
     }
 
-    function getTraits(uint256 _tokenId) public view returns (uint256 traits) {
-        require(_exists(_tokenId), "Invalid Token ID");
+    function getTraits(uint256 _tokenId) public view onlyExistingTokens(_tokenId) returns (uint256 traits) {
         if (customFrameTraits[_tokenId] != 0) {
             return customFrameTraits[_tokenId];
         } else {
@@ -259,7 +266,7 @@ contract MurAllFrame is
         address contentContractAddress,
         uint256 contentTokenId,
         uint256 contentAmount
-    ) public {
+    ) public onlyExistingTokens(_tokenId) {
         require(ownerOf(_tokenId) == msg.sender, "Not token owner");
         require(!hasContentsInFrame(_tokenId), "Frame already contains an NFT"); // Also checks token exists
         // use contract address to get contract instance as ERC721 instance
@@ -285,7 +292,7 @@ contract MurAllFrame is
         }
     }
 
-    function removeFrameContents(uint256 _tokenId) public {
+    function removeFrameContents(uint256 _tokenId) public onlyExistingTokens(_tokenId) {
         require(ownerOf(_tokenId) == msg.sender, "Not token owner");
         require(hasContentsInFrame(_tokenId), "Frame does not contain an NFT"); // Also checks token exists
         FrameContents memory _frameContents = frameContents[_tokenId];
@@ -307,8 +314,7 @@ contract MurAllFrame is
         emit FrameContentsRemoved(_tokenId);
     }
 
-    function hasContentsInFrame(uint256 _tokenId) public view returns (bool) {
-        require(_exists(_tokenId), "Invalid Token ID");
+    function hasContentsInFrame(uint256 _tokenId) public view onlyExistingTokens(_tokenId) returns (bool) {
         return frameContents[_tokenId].contractAddress != address(0);
     }
 
@@ -323,11 +329,10 @@ contract MurAllFrame is
         uint256 tokenId,
         bytes memory data
     ) public virtual override returns (bytes4) {
-        require(from == msg.sender, "Invalid sender");
         require(data.length != 0, "Invalid data - must contain target frame token id");
         (uint256 targetFrameTokenId, address contractAddress) = abi.decode(data, (uint256, address));
         require(_exists(targetFrameTokenId), "Invalid Token ID");
-        require(ownerOf(targetFrameTokenId) == msg.sender, "Invalid owner");
+        require(ownerOf(targetFrameTokenId) == from, "Owner of target frame does not own the contents");
         require(!hasContentsInFrame(targetFrameTokenId), "Frame already contains an NFT");
         require(
             contractAddress.supportsInterface(_INTERFACE_ID_ERC721) &&
@@ -348,12 +353,11 @@ contract MurAllFrame is
         uint256 amount,
         bytes memory data
     ) public virtual override returns (bytes4) {
-        require(from == msg.sender, "Invalid sender");
         require(data.length != 0, "Data must contain target frame id, owner and contract address");
         (uint256 targetFrameTokenId, address contractAddress) = abi.decode(data, (uint256, address));
 
         require(!hasContentsInFrame(targetFrameTokenId), "Frame already contains an NFT"); // Also checks token exists
-        require(ownerOf(targetFrameTokenId) == msg.sender, "Invalid owner");
+        require(ownerOf(targetFrameTokenId) == from, "Owner of target frame does not own the contents");
         require(
             contractAddress.supportsInterface(_INTERFACE_ID_ERC1155) &&
                 IERC1155(contractAddress).balanceOf(address(this), tokenId) == amount,
