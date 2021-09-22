@@ -110,6 +110,7 @@ contract MurAllFrame is
     event FrameContentsRemoved(uint256 indexed id);
     event RoyaltyGovernorContractChanged(address indexed royaltyGovernor);
     event FrameTraitImageStorageContractChanged(address indexed traitImageStorage);
+    event PresaleMerkleRootSet(bytes32 merkleRoot);
 
     constructor(
         address[] memory admins,
@@ -215,6 +216,7 @@ contract MurAllFrame is
     function setPresaleMintingMerkleRoot(bytes32 merkleRoot) public onlyAdmin {
         require(address(presaleManager) == address(0), "Merkle root already set");
         presaleManager = new MerkleTokenClaimDataManager(merkleRoot);
+        emit PresaleMerkleRootSet(merkleRoot);
     }
 
     /**
