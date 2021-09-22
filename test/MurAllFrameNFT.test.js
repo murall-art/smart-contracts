@@ -2,11 +2,14 @@ const { expectEvent, expectRevert, BN, balance } = require('@openzeppelin/test-h
 const Web3 = require('web3')
 const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:7545'))
 const timeMachine = require('ganache-time-traveler')
+const { ZERO_ADDRESS } = require('@openzeppelin/test-helpers/src/constants')
 const MurAllFrame = artifacts.require('./frames/MurAllFrame.sol')
 const MockERC721 = artifacts.require('./mock/MockERC721.sol')
 const MockERC1155 = artifacts.require('./mock/MockERC1155.sol')
 const MockERC20 = artifacts.require('./mock/MockERC20.sol')
 const TimeHelper = artifacts.require('./mock/TimeHelper.sol')
+require('chai').should()
+const { expect } = require('chai')
 
 contract('MurAllFrame', ([owner, user, randomer]) => {
     const to18DP = value => {
@@ -370,6 +373,204 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
 
                 assert.equal(await contract.ownerOf(0), randomer)
                 assert.equal(await contract.balanceOf(randomer), 1)
+            })
+        })
+    })
+
+    describe('Admin functions', async () => {
+        it('requestTraitSeed disallowed from non admin account', async () => {
+            await expectRevert(
+                contract.requestTraitSeed({
+                    from: randomer
+                }),
+                'Does not have admin role'
+            )
+        })
+
+        it('setRoyaltyGovernor disallowed from non admin account', async () => {
+            await expectRevert(
+                contract.setRoyaltyGovernor(ZERO_ADDRESS, {
+                    from: randomer
+                }),
+                'Does not have admin role'
+            )
+        })
+
+        describe('rescueTokens', async () => {
+            beforeEach(async () => {
+                fundAccount(randomer, ONE_MILLION_TOKENS)
+                this.mockERC20.transfer(contract.address, ONE_MILLION_TOKENS, {
+                    from: randomer
+                })
+            })
+
+            it('rescueTokens disallowed from non admin account', async () => {
+                await expectRevert(
+                    contract.rescueTokens(this.mockERC20.address, {
+                        from: randomer
+                    }),
+                    'Does not have admin role'
+                )
+            })
+
+            it('rescueTokens allowed from admin account and transfers tokens to sender', async () => {
+                const ownerBalance = await this.mockERC20.balanceOf(owner)
+                await contract.rescueTokens(this.mockERC20.address, {
+                    from: owner
+                })
+
+                const contractBalanceAfter = await this.mockERC20.balanceOf(contract.address)
+                const ownerBalanceAfter = await this.mockERC20.balanceOf(owner)
+
+                contractBalanceAfter.should.be.bignumber.equal(new BN('0'))
+
+                ownerBalanceAfter.sub(ownerBalance).should.be.bignumber.equal(ONE_MILLION_TOKENS)
+            })
+        })
+
+        describe('withdrawFunds', async () => {
+            beforeEach(async () => {
+                contract.setMintingMode(MINT_MODE_PUBLIC, {
+                    from: owner
+                })
+
+                await contract.mint({
+                    from: randomer,
+                    value: web3.utils.toWei('0.25', 'ether')
+                })
+            })
+
+            it('withdrawFunds disallowed from non admin account', async () => {
+                await expectRevert(
+                    contract.withdrawFunds(user, {
+                        from: randomer
+                    }),
+                    'Does not have admin role'
+                )
+            })
+
+            it('withdrawFunds allowed from admin account and transfers funds to specified address', async () => {
+                const tracker = await balance.tracker(user) // instantiation
+
+                await contract.withdrawFunds(user, {
+                    from: owner
+                })
+
+                const deltaBalance = await tracker.delta()
+                deltaBalance.should.be.bignumber.equal(web3.utils.toWei('0.25', 'ether'))
+            })
+        })
+
+        describe('setPresaleMintingMerkleRoot', async () => {
+            it('setPresaleMintingMerkleRoot disallowed from non admin account', async () => {
+                await expectRevert(
+                    contract.setPresaleMintingMerkleRoot(merkleData.merkleRoot, {
+                        from: randomer
+                    }),
+                    'Does not have admin role'
+                )
+            })
+
+            it('setPresaleMintingMerkleRoot allowed from admin account', async () => {
+                const receipt = await contract.setPresaleMintingMerkleRoot(merkleData.merkleRoot, {
+                    from: owner
+                })
+                await expectEvent(receipt, 'PresaleMerkleRootSet', {
+                    merkleRoot: merkleData.merkleRoot
+                })
+            })
+
+            it('setPresaleMintingMerkleRoot not allowed to be changed once it has been set', async () => {
+                await contract.setPresaleMintingMerkleRoot(merkleData.merkleRoot, {
+                    from: owner
+                })
+                await expectRevert(
+                    contract.setPresaleMintingMerkleRoot(
+                        '0x63a727f718138b0a08d032346812ae97b7c5dbf4d1a4f1da857c4d7dadff776c',
+                        {
+                            from: owner
+                        }
+                    ),
+                    'Merkle root already set'
+                )
+            })
+        })
+
+        describe('setMintingMode', async () => {
+            it('setMintingMode disallowed from non admin account', async () => {
+                await expectRevert(
+                    contract.setMintingMode(MINT_MODE_DEVELOPMENT, {
+                        from: randomer
+                    }),
+                    'Does not have admin role'
+                )
+            })
+
+            it('setMintingMode fails if trying to set unsupported mode', async () => {
+                await expectRevert(
+                    contract.setMintingMode(4, {
+                        from: owner
+                    }),
+                    'Invalid mode'
+                )
+            })
+
+            it('setMintingMode to MINT_MODE_PRESALE sets mode successfully', async () => {
+                await contract.setMintingMode(MINT_MODE_PRESALE, {
+                    from: owner
+                })
+                assert.equal(await contract.mintMode(), MINT_MODE_PRESALE)
+            })
+
+            it('setMintingMode to MINT_MODE_PUBLIC sets mode successfully', async () => {
+                await contract.setMintingMode(MINT_MODE_PUBLIC, {
+                    from: owner
+                })
+                assert.equal(await contract.mintMode(), MINT_MODE_PUBLIC)
+            })
+
+            it('setMintingMode to MINT_MODE_DEVELOPMENT sets mode successfully', async () => {
+                await contract.setMintingMode(MINT_MODE_PUBLIC, {
+                    from: owner
+                })
+                await contract.setMintingMode(MINT_MODE_DEVELOPMENT, {
+                    from: owner
+                })
+                assert.equal(await contract.mintMode(), MINT_MODE_DEVELOPMENT)
+            })
+        })
+
+        it('setFrameTraitImageStorage disallowed from non admin account', async () => {
+            await expectRevert(
+                contract.setFrameTraitImageStorage(ZERO_ADDRESS, {
+                    from: randomer
+                }),
+                'Does not have admin role'
+            )
+        })
+
+        describe('setTokenUriBase', async () => {
+            it('setTokenUriBase disallowed from non admin account', async () => {
+                await expectRevert(
+                    contract.setTokenUriBase('some url', {
+                        from: randomer
+                    }),
+                    'Does not have admin role'
+                )
+            })
+
+            it('setTokenUriBase from admin account sets base uri', async () => {
+                const uri = 'some url'
+                await contract.setTokenUriBase(uri, {
+                    from: owner
+                })
+
+                assert.equal(await contract.baseURI(), uri)
+
+                await contract.mintInitial(1, {
+                    from: owner
+                })
+                assert.equal(await contract.tokenURI(0), uri + '0')
             })
         })
     })
