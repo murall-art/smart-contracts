@@ -150,44 +150,6 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             )
         })
 
-        it('public minting disallowed when no value passed', async () => {
-            contract.setMintingMode(MINT_MODE_PUBLIC, {
-                from: owner
-            })
-            await expectRevert(
-                contract.mint({
-                    from: randomer
-                }),
-                'Insufficient funds'
-            )
-        })
-
-        it('public minting disallowed when value passed is less than public minting value', async () => {
-            contract.setMintingMode(MINT_MODE_PUBLIC, {
-                from: owner
-            })
-            await expectRevert(
-                contract.mint({
-                    from: randomer,
-                    value: web3.utils.toWei('0.2499999999', 'ether')
-                }),
-                'Insufficient funds'
-            )
-        })
-
-        it('public minting allowed when value passed is equal to public minting value', async () => {
-            contract.setMintingMode(MINT_MODE_PUBLIC, {
-                from: owner
-            })
-
-            await contract.mint({
-                from: randomer,
-                value: web3.utils.toWei('0.25', 'ether')
-            })
-
-            assert.equal(await contract.ownerOf(0), randomer)
-        })
-
         it('presale minting disallowed when presale minting flag is false', async () => {
             await expectRevert(
                 contract.mintPresale(1, randomer, [], {
@@ -197,75 +159,121 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             )
         })
 
-        it('presale minting disallowed when no value is passed', async () => {
-            contract.setMintingMode(MINT_MODE_PRESALE, {
-                from: owner
+        describe('Public minting', async () => {
+            beforeEach(async () => {
+                contract.setMintingMode(MINT_MODE_PUBLIC, {
+                    from: owner
+                })
             })
-            await expectRevert(
-                contract.mintPresale(1, randomer, [], {
-                    from: randomer
-                }),
-                'Insufficient funds'
-            )
-        })
 
-        it('presale minting disallowed when value passed is less than presale minting value', async () => {
-            contract.setMintingMode(MINT_MODE_PRESALE, {
-                from: owner
+            it('public minting disallowed when no value passed', async () => {
+                await expectRevert(
+                    contract.mint({
+                        from: randomer
+                    }),
+                    'Insufficient funds'
+                )
             })
-            await expectRevert(
-                contract.mintPresale(1, randomer, [], {
+
+            it('public minting disallowed when value passed is less than public minting value', async () => {
+                await expectRevert(
+                    contract.mint({
+                        from: randomer,
+                        value: web3.utils.toWei('0.2499999999', 'ether')
+                    }),
+                    'Insufficient funds'
+                )
+            })
+
+            it('public minting allowed when value passed is equal to public minting value', async () => {
+                await contract.mint({
                     from: randomer,
-                    value: web3.utils.toWei('0.149999999999', 'ether')
-                }),
-                'Insufficient funds'
-            )
+                    value: web3.utils.toWei('0.25', 'ether')
+                })
+
+                assert.equal(await contract.ownerOf(0), randomer)
+            })
         })
 
-        it('presale minting disallowed account passed does not match account used for transaction', async () => {
-            contract.setMintingMode(MINT_MODE_PRESALE, {
-                from: owner
+        describe('Presale minting', async () => {
+            beforeEach(async () => {
+                contract.setMintingMode(MINT_MODE_PRESALE, {
+                    from: owner
+                })
+                contract.setPresaleMintingMerkleRoot(merkleData.merkleRoot, {
+                    from: owner
+                })
             })
 
-            await expectRevert(
-                contract.mintPresale(1, randomer, [], {
-                    from: user,
-                    value: web3.utils.toWei('0.15', 'ether')
-                }),
-                'Account is not the presale account'
-            )
-        })
-        it('presale minting disallowed account when proofs do not match', async () => {
-            contract.setMintingMode(MINT_MODE_PRESALE, {
-                from: owner
-            })
-            contract.setPresaleMintingMerkleRoot(merkleData.merkleRoot, {
-                from: owner
+            it('presale minting disallowed when no value is passed', async () => {
+                await expectRevert(
+                    contract.mintPresale(1, randomer, [], {
+                        from: randomer
+                    }),
+                    'Insufficient funds'
+                )
             })
 
-            await expectRevert(
-                contract.mintPresale(1, randomer, [], {
+            it('presale minting disallowed when value passed is less than presale minting value', async () => {
+                await expectRevert(
+                    contract.mintPresale(1, randomer, [], {
+                        from: randomer,
+                        value: web3.utils.toWei('0.149999999999', 'ether')
+                    }),
+                    'Insufficient funds'
+                )
+            })
+
+            it('presale minting disallowed account passed does not match account used for transaction', async () => {
+                await expectRevert(
+                    contract.mintPresale(1, randomer, [], {
+                        from: user,
+                        value: web3.utils.toWei('0.15', 'ether')
+                    }),
+                    'Account is not the presale account'
+                )
+            })
+            it('presale minting disallowed account when proofs do not match', async () => {
+                await expectRevert(
+                    contract.mintPresale(1, randomer, [], {
+                        from: randomer,
+                        value: web3.utils.toWei('0.15', 'ether')
+                    }),
+                    'Invalid proof.'
+                )
+            })
+
+            it('presale minting allowed when account passed matches account used for transaction and proofs match', async () => {
+                const claimData = merkleData.claims[randomer]
+
+                assert.equal(await contract.balanceOf(randomer), 0)
+                await contract.mintPresale(claimData.index, randomer, claimData.proof, {
                     from: randomer,
                     value: web3.utils.toWei('0.15', 'ether')
-                }),
-                'Invalid proof.'
-            )
-        })
+                })
+                assert.equal(await contract.balanceOf(randomer), 1)
+                assert.equal(await contract.ownerOf(0), randomer)
+            })
 
-        it('presale minting allowed when account passed matches account used for transaction and proofs match', async () => {
-            contract.setMintingMode(MINT_MODE_PRESALE, {
-                from: owner
-            })
-            contract.setPresaleMintingMerkleRoot(merkleData.merkleRoot, {
-                from: owner
-            })
-            const claimData = merkleData.claims[randomer]
+            it('presale minting disallowed after account has already minted', async () => {
+                const claimData = merkleData.claims[randomer]
 
-            await contract.mintPresale(claimData.index, randomer, claimData.proof, {
-                from: randomer,
-                value: web3.utils.toWei('0.15', 'ether')
+                await contract.mintPresale(claimData.index, randomer, claimData.proof, {
+                    from: randomer,
+                    value: web3.utils.toWei('0.15', 'ether')
+                })
+
+                await expectRevert(
+                    contract.mintPresale(claimData.index, randomer, claimData.proof, {
+                        from: randomer,
+                        value: web3.utils.toWei('0.15', 'ether')
+                    }),
+                    'Address already minted'
+                )
+
+                assert.equal(await contract.ownerOf(0), randomer)
+                assert.equal(await contract.balanceOf(randomer), 1)
             })
-            assert.equal(await contract.ownerOf(0), randomer)
         })
     })
 })
