@@ -69,7 +69,7 @@ contract MurAllFrame is
     uint256 public constant MINT_MODE_PRESALE = 1;
     uint256 public mintMode = MINT_MODE_DEVELOPMENT;
 
-    uint256 public constant NUM_LEGENDARIES_MINTABLE = 200;
+    uint256 public constant NUM_INITIAL_MINTABLE = 200;
     uint256 public constant NUM_PRESALE_MINTABLE = 700;
     uint256 public constant MINT_PRICE_PRESALE = 0.15 ether;
     uint256 public constant MINT_PRICE_PUBLIC = 0.25 ether;
@@ -110,7 +110,6 @@ contract MurAllFrame is
     event FrameContentsRemoved(uint256 indexed id);
     event RoyaltyGovernorContractChanged(address indexed royaltyGovernor);
     event FrameTraitImageStorageContractChanged(address indexed traitImageStorage);
-    event ValueMint(uint256 value);
 
     constructor(
         address[] memory admins,
@@ -132,11 +131,11 @@ contract MurAllFrame is
         require(msg.value >= MINT_PRICE_PUBLIC, "Insufficient funds");
         require(totalSupply() <= MAX_SUPPLY, "Maximum number of frames minted");
 
+        // mint a new frame
         uint256 _id = totalSupply();
-
         _mint(msg.sender, _id);
-
         emit FrameMinted(_id, msg.sender);
+
         return _id;
     }
 
@@ -149,29 +148,32 @@ contract MurAllFrame is
         require(msg.value >= MINT_PRICE_PRESALE, "Insufficient funds");
         require(totalSupply() <= NUM_PRESALE_MINTABLE, "Maximum number of presale NFT's reached");
         require(msg.sender == account, "Account is not the presale account");
+        require(address(presaleManager) != address(0), "Merkle root not set");
         require(!presaleManager.hasClaimed(index), "Address already minted");
+        require(totalSupply() <= MAX_SUPPLY, "Maximum number of frames minted");
 
         // Verify the merkle proof.
         presaleManager.verifyAndSetClaimed(index, account, uint256(1), merkleProof);
-        require(totalSupply() <= MAX_SUPPLY, "Maximum number of frames minted");
 
+        // mint a new frame
         uint256 _id = totalSupply();
-
         _mint(msg.sender, _id);
-
         emit FrameMinted(_id, msg.sender);
+
         return _id;
     }
 
     function mintCustomInitial(uint256[] memory traitHash) public nonReentrant onlyAdmin {
-        require(totalSupply() <= NUM_LEGENDARIES_MINTABLE, "Maximum number of initial NFT's reached");
+        require(totalSupply() <= NUM_INITIAL_MINTABLE, "Maximum number of initial NFT's reached");
 
         for (uint256 i = 0; i < traitHash.length; ++i) {
             require(traitHash[i] != 0, "Invalid trait hash");
             require(totalSupply() <= MAX_SUPPLY, "Maximum number of frames minted");
-            uint256 _id = totalSupply();
 
+            // mint a new frame
+            uint256 _id = totalSupply();
             _mint(msg.sender, _id);
+
             customFrameTraits[_id] = traitHash[i];
 
             emit FrameMinted(_id, msg.sender);
@@ -179,14 +181,13 @@ contract MurAllFrame is
     }
 
     function mintInitial(uint256 amountToMint) public nonReentrant onlyAdmin returns (uint256) {
-        require(totalSupply() <= NUM_LEGENDARIES_MINTABLE, "Maximum number of initial NFT's reached");
+        require(totalSupply() <= NUM_INITIAL_MINTABLE, "Maximum number of initial NFT's reached");
 
-        for (uint256 i = 0; i <= amountToMint; ++i) {
+        for (uint256 i = 0; i < amountToMint; ++i) {
             require(totalSupply() <= MAX_SUPPLY, "Maximum number of frames minted");
+            // mint a new frame
             uint256 _id = totalSupply();
-
             _mint(msg.sender, _id);
-
             emit FrameMinted(_id, msg.sender);
         }
     }
