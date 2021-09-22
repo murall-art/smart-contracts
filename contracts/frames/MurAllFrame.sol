@@ -149,7 +149,7 @@ contract MurAllFrame is
         require(msg.value >= MINT_PRICE_PRESALE, "Insufficient funds");
         require(totalSupply() <= NUM_PRESALE_MINTABLE, "Maximum number of presale NFT's reached");
         require(msg.sender == account, "Account is not the presale account");
-        require(!presaleManager.hasClaimed(index), "Address already minted.");
+        require(!presaleManager.hasClaimed(index), "Address already minted");
 
         // Verify the merkle proof.
         presaleManager.verifyAndSetClaimed(index, account, uint256(1), merkleProof);
