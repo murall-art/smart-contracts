@@ -449,6 +449,21 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                 )
             })
 
+            it('setFrameContents with ERC721 when frame already has contents fails', async () => {
+                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC721.address, tokenId, 1, {
+                    from: randomer
+                })
+
+                await mintTestERC721TokenWithId(randomer, tokenId + 1)
+
+                await expectRevert(
+                    contract.setFrameContents(frameTokenIdRandomer, this.mockERC721.address, tokenId + 1, 1, {
+                        from: randomer
+                    }),
+                    'Frame already contains an NFT'
+                )
+            })
+
             it('setFrameContents with ERC721 NFT sets contents', async () => {
                 const receipt = await contract.setFrameContents(
                     frameTokenIdRandomer,
@@ -496,6 +511,36 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                 )
             })
 
+            it('sending ERC721 NFT to Frame contract for frame that already contains contents fails', async () => {
+                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC721.address, tokenId, 1, {
+                    from: randomer
+                })
+
+                await mintTestERC721TokenWithId(randomer, tokenId + 1)
+
+                const data = web3.eth.abi.encodeParameters(
+                    ['uint256', 'address'],
+                    [frameTokenIdRandomer, this.mockERC721.address]
+                )
+
+                await expectRevert(
+                    this.mockERC721.methods['safeTransferFrom(address,address,uint256,bytes)'](
+                        randomer,
+                        contract.address,
+                        tokenId + 1,
+                        data,
+                        {
+                            from: randomer
+                        }
+                    ),
+                    'Frame already contains an NFT'
+                )
+                await this.mockERC721.transferFrom(randomer, contract.address, tokenId + 1, {
+                    from: randomer
+                })
+                console.log(await this.mockERC721.ownerOf(tokenId + 1) + ' ' + contract.address)
+            })
+
             it('sending ERC721 NFT to Frame contract with correct data sets contents', async () => {
                 const data = web3.eth.abi.encodeParameters(
                     ['uint256', 'address'],
@@ -538,6 +583,32 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                         }
                     ),
                     'Owner of target frame does not own the contents'
+                )
+            })
+
+            it('sending ERC1155 NFT to Frame contract for frame you do not own fails', async () => {
+                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC1155.address, tokenId, amount, {
+                    from: randomer
+                })
+                await mintTestERC1155Token(randomer, tokenId + 1, amount)
+
+                const data = web3.eth.abi.encodeParameters(
+                    ['uint256', 'address'],
+                    [frameTokenIdRandomer, this.mockERC1155.address]
+                )
+
+                await expectRevert(
+                    this.mockERC1155.methods['safeTransferFrom(address,address,uint256,uint256,bytes)'](
+                        randomer,
+                        contract.address,
+                        tokenId + 1,
+                        amount,
+                        data,
+                        {
+                            from: randomer
+                        }
+                    ),
+                    'Frame already contains an NFT'
                 )
             })
 
@@ -584,6 +655,20 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                 assert.equal(frameContents.contractAddress, this.mockERC1155.address)
                 assert.equal(frameContents.tokenId, tokenId)
                 assert.equal(frameContents.amount, amount)
+            })
+
+            it('setFrameContents with ERC1155 NFT when frame already has contents fails', async () => {
+                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC1155.address, tokenId, amount, {
+                    from: randomer
+                })
+                await mintTestERC1155Token(randomer, tokenId + 1, amount)
+
+                await expectRevert(
+                    contract.setFrameContents(frameTokenIdRandomer, this.mockERC1155.address, tokenId, amount, {
+                        from: randomer
+                    }),
+                    'Frame already contains an NFT'
+                )
             })
 
             it('setFrameContents with ERC1155 NFT sets contents', async () => {

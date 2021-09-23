@@ -12,8 +12,6 @@ contract MerkleTokenClaimDataManager is ReentrancyGuard {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     using Strings for uint256;
 
-    bool public publicMintingEnabled = false;
-    bool public presaleMintingEnabled = false;
     bytes32 public immutable merkleRoot;
     // This is a packed array of booleans.
     mapping(uint256 => uint256) private claimsBitMap;
