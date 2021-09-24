@@ -15,6 +15,7 @@ contract MurAllRolesNFT is ERC1155Supply, ReentrancyGuard, AccessControl, Ownabl
     struct Role {
         bool exists;
         bytes32 merkleRoot;
+        string uri;
         mapping(address => bool) claimedRole;
     }
     uint256 public constant TYPE_PAINTER = 1;
@@ -35,30 +36,42 @@ contract MurAllRolesNFT is ERC1155Supply, ReentrancyGuard, AccessControl, Ownabl
 
     constructor(
         address[] memory admins,
-        string memory uri,
+        string memory painterUri,
+        string memory murAllistUri,
         MurAll _murAllAddr
-    ) public ERC1155(uri) {
+    ) public ERC1155("") {
         for (uint256 i = 0; i < admins.length; ++i) {
             _setupRole(ADMIN_ROLE, admins[i]);
         }
         murAll = _murAllAddr;
-        Role memory role = Role(true, "");
+        Role memory role = Role(true, "", painterUri);
         roles[TYPE_PAINTER] = role;
 
-        Role memory role2 = Role(true, "");
+        Role memory role2 = Role(true, "", murAllistUri);
         roles[TYPE_MURALLIST] = role2;
     }
 
-    function addRole(uint256 id, bytes32 _root) public onlyAdmin {
+    function addRole(
+        uint256 id,
+        bytes32 _root,
+        string memory uri
+    ) public onlyAdmin {
         require(!roles[id].exists, "Role already exists");
 
-        Role memory role = Role(true, _root);
+        Role memory role = Role(true, _root, uri);
 
         roles[id] = role;
         emit RoleAdded(id);
     }
 
     function setupClaimMerkleRootForRole(uint256 id, bytes32 _root) public onlyAdmin {
+        Role storage role = roles[id];
+        require(role.exists, "Role does not exist");
+
+        role.merkleRoot = _root;
+    }
+
+    function setupUriForRole(uint256 id, bytes32 _root) public onlyAdmin {
         Role storage role = roles[id];
         require(role.exists, "Role does not exist");
 
@@ -126,7 +139,15 @@ contract MurAllRolesNFT is ERC1155Supply, ReentrancyGuard, AccessControl, Ownabl
         return roles[roleId].exists;
     }
 
-    function setURI(string memory newuri) public onlyAdmin {
-        _setURI(newuri);
+    function setURI(uint256 roleId, string memory newuri) public onlyAdmin {
+        Role storage role = roles[roleId];
+        require(role.exists, "Role does not exist");
+
+        role.uri = newuri;
+        emit URI(newuri, roleId);
+    }
+
+    function uri(uint256 roleId) external override view returns (string memory) {
+        return roles[roleId].uri;
     }
 }

@@ -69,7 +69,9 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
         )
     }
 
-    const BASE_URI = 'https://example.com'
+    const PAINTER_URI = 'https://example.com'
+    const MURALLIST_URI = 'https://example2.com'
+    const NEW_ROLE_URI = 'https://example3.com'
     const TYPE_PAINTER = 1
     const TYPE_MURALLIST = 2
 
@@ -119,7 +121,13 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
         )
         await this.murAllNFT.transferOwnership(this.murAllContract.address, { from: owner })
 
-        this.murAllRolesNFT = await MurAllRolesNFT.new([owner], BASE_URI, this.murAllContract.address, { from: owner })
+        this.murAllRolesNFT = await MurAllRolesNFT.new(
+            [owner],
+            PAINTER_URI,
+            MURALLIST_URI,
+            this.murAllContract.address,
+            { from: owner }
+        )
 
         this.startBlock = await time.latestBlock()
     })
@@ -139,6 +147,7 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
 
             assert.equal(await this.murAllRolesNFT.TYPE_PAINTER(), TYPE_PAINTER)
             assert.isTrue(await this.murAllRolesNFT.roleExists(TYPE_PAINTER))
+            assert.equal(await this.murAllRolesNFT.uri(TYPE_PAINTER), PAINTER_URI)
         })
 
         it('adds MurAllist role by default', async () => {
@@ -146,6 +155,7 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
 
             assert.equal(await this.murAllRolesNFT.TYPE_MURALLIST(), TYPE_MURALLIST)
             assert.isTrue(await this.murAllRolesNFT.roleExists(TYPE_MURALLIST))
+            assert.equal(await this.murAllRolesNFT.uri(TYPE_MURALLIST), MURALLIST_URI)
         })
     })
     describe('claimPainterRoleL1', async () => {
@@ -241,6 +251,23 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
             assert.isTrue(await this.murAllRolesNFT.hasClaimedRole(user, claimProof.amount))
         })
 
+        it('with new role and valid proof from address matching proofs succeeds', async () => {
+            const claimProof = merkleProof.claims[randomer]
+            await this.murAllRolesNFT.addRole(123, merkleProof.merkleRoot, NEW_ROLE_URI, {
+                from: owner
+            })
+            const receipt = await this.murAllRolesNFT.claimRole(claimProof.index, claimProof.amount, claimProof.proof, {
+                from: randomer
+            })
+
+            await expectEvent(receipt, 'RoleClaimed', {
+                id: '123',
+                owner: randomer
+            })
+
+            assert.isTrue(await this.murAllRolesNFT.hasClaimedRole(randomer, claimProof.amount))
+        })
+
         it('with valid proof from address matching proofs but has already been claimed fails', async () => {
             const claimProof = merkleProof.claims[user]
 
@@ -262,7 +289,7 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
         describe('addRole', async () => {
             it('from account that is not admin fail', async () => {
                 await expectRevert(
-                    this.murAllRolesNFT.addRole(newRoleId, merkleRoot, {
+                    this.murAllRolesNFT.addRole(newRoleId, merkleRoot, NEW_ROLE_URI, {
                         from: user
                     }),
                     'Does not have admin role'
@@ -271,7 +298,7 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
 
             it('with role id that already exists fail', async () => {
                 await expectRevert(
-                    this.murAllRolesNFT.addRole(TYPE_MURALLIST, merkleRoot, {
+                    this.murAllRolesNFT.addRole(TYPE_MURALLIST, merkleRoot, NEW_ROLE_URI, {
                         from: owner
                     }),
                     'Role already exists'
@@ -279,7 +306,7 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
             })
 
             it('from admin account succeeds', async () => {
-                const receipt = await this.murAllRolesNFT.addRole(newRoleId, merkleRoot, {
+                const receipt = await this.murAllRolesNFT.addRole(newRoleId, merkleRoot, NEW_ROLE_URI, {
                     from: owner
                 })
 
@@ -288,6 +315,7 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
                 })
 
                 assert.isTrue(await this.murAllRolesNFT.roleExists(newRoleId))
+                assert.equal(await this.murAllRolesNFT.uri(newRoleId), NEW_ROLE_URI)
             })
         })
 
@@ -296,6 +324,7 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
                 await this.murAllRolesNFT.addRole(
                     newRoleId,
                     '0x53a727f718138b0a08d032346812ae97b7c5dbf4d1a4f1da857c4d7dadff776d',
+                    NEW_ROLE_URI,
                     {
                         from: owner
                     }
@@ -331,7 +360,7 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
 
         describe('mintRole', async () => {
             beforeEach(async () => {
-                await this.murAllRolesNFT.addRole(newRoleId, merkleRoot, {
+                await this.murAllRolesNFT.addRole(newRoleId, merkleRoot, NEW_ROLE_URI, {
                     from: owner
                 })
             })
@@ -387,7 +416,7 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
 
         describe('mintMultiple', async () => {
             beforeEach(async () => {
-                await this.murAllRolesNFT.addRole(newRoleId, merkleRoot, {
+                await this.murAllRolesNFT.addRole(newRoleId, merkleRoot, NEW_ROLE_URI, {
                     from: owner
                 })
             })
@@ -448,7 +477,7 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
         })
         describe('setURI', async () => {
             beforeEach(async () => {
-                await this.murAllRolesNFT.addRole(newRoleId, merkleRoot, {
+                await this.murAllRolesNFT.addRole(newRoleId, merkleRoot, NEW_ROLE_URI, {
                     from: owner
                 })
                 await this.murAllRolesNFT.mintRole(user, newRoleId, {
@@ -458,7 +487,7 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
 
             it('with account that is not admin fails', async () => {
                 await expectRevert(
-                    this.murAllRolesNFT.setURI(BASE_URI, {
+                    this.murAllRolesNFT.setURI(newRoleId, PAINTER_URI, {
                         from: user
                     }),
                     'Does not have admin role'
@@ -466,11 +495,16 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
             })
 
             it('with admin account succeeds', async () => {
-                await this.murAllRolesNFT.setURI(BASE_URI, {
+                const receipt = await this.murAllRolesNFT.setURI(newRoleId, PAINTER_URI, {
                     from: owner
                 })
 
-                assert.equal(await this.murAllRolesNFT.uri(newRoleId), BASE_URI)
+                await expectEvent(receipt, 'URI', {
+                    id: newRoleId.toString(),
+                    value: PAINTER_URI
+                })
+
+                assert.equal(await this.murAllRolesNFT.uri(newRoleId), PAINTER_URI)
             })
         })
     })
