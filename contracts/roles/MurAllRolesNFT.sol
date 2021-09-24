@@ -25,6 +25,7 @@ contract MurAllRolesNFT is ERC1155Supply, ReentrancyGuard, AccessControl, Ownabl
     mapping(uint256 => Role) public roles;
 
     event RoleClaimed(uint256 indexed id, address owner);
+    event RoleAdded(uint256 indexed id);
     /** @dev Checks if sender address has admin role
      */
     modifier onlyAdmin() {
@@ -54,6 +55,7 @@ contract MurAllRolesNFT is ERC1155Supply, ReentrancyGuard, AccessControl, Ownabl
         Role memory role = Role(true, _root);
 
         roles[id] = role;
+        emit RoleAdded(id);
     }
 
     function setupClaimMerkleRootForRole(uint256 id, bytes32 _root) public onlyAdmin {

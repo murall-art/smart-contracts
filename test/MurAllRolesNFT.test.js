@@ -243,7 +243,7 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
 
         it('with valid proof from address matching proofs but has already been claimed fails', async () => {
             const claimProof = merkleProof.claims[user]
-            
+
             await this.murAllRolesNFT.claimRole(claimProof.index, claimProof.amount, claimProof.proof, {
                 from: user
             })
@@ -279,8 +279,12 @@ contract('MurAllRolesNFT', ([owner, user, randomer]) => {
             })
 
             it('from admin account succeeds', async () => {
-                await this.murAllRolesNFT.addRole(newRoleId, merkleRoot, {
+                const receipt = await this.murAllRolesNFT.addRole(newRoleId, merkleRoot, {
                     from: owner
+                })
+
+                await expectEvent(receipt, 'RoleAdded', {
+                    id: newRoleId.toString()
                 })
 
                 assert.isTrue(await this.murAllRolesNFT.roleExists(newRoleId))
