@@ -142,244 +142,33 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
         })
 
         it('has a name', async function () {
-            assert.equal(await contract.name(), 'MurAll Frame')
+            assert.equal(await contract.name(), 'Frames by MurAll')
         })
 
         it('has a symbol', async function () {
-            assert.equal(await contract.symbol(), 'FRAME')
-        })
-    })
-    describe('Minting', async () => {
-        it('public minting disallowed when public minting flag is false', async () => {
-            await expectRevert(
-                contract.mint({
-                    from: randomer
-                }),
-                'Public minting not enabled'
-            )
+            assert.equal(await contract.symbol(), 'FRAMES')
         })
 
-        it('presale minting disallowed when presale minting flag is false', async () => {
-            await expectRevert(
-                contract.mintPresale(1, randomer, [], {
-                    from: randomer
-                }),
-                'Presale minting not enabled'
-            )
+        it('has a max supply', async function () {
+            assert.equal(await contract.MAX_SUPPLY(), 4444)
         })
 
-        it('presale minting disallowed when merkle root has not been set', async () => {
-            contract.setMintingMode(MINT_MODE_PRESALE, {
-                from: owner
-            })
-
-            await expectRevert(
-                contract.mintPresale(1, randomer, [], {
-                    from: randomer,
-                    value: web3.utils.toWei('0.15', 'ether')
-                }),
-                'Merkle root not set'
-            )
+        it('has a max number initially mintable by admins', async function () {
+            assert.equal(await contract.NUM_INITIAL_MINTABLE(), 436)
         })
 
-        it('initial minting disallowed from non-admin account', async () => {
-            await expectRevert(
-                contract.mintInitial(1, {
-                    from: randomer
-                }),
-                'Does not have admin role'
-            )
+        it('has a max number mintable by presale', async function () {
+            assert.equal(await contract.NUM_PRESALE_MINTABLE(), 1004)
         })
 
-        it('initial minting with custom traits disallowed from non-admin account', async () => {
-            await expectRevert(
-                contract.mintCustomInitial([1], {
-                    from: randomer
-                }),
-                'Does not have admin role'
-            )
+        it('has presale mint price', async function () {
+            const presaleMintPrice = await contract.MINT_PRICE_PRESALE()
+            presaleMintPrice.should.be.bignumber.equal(web3.utils.toWei('0.144', 'ether'))
         })
 
-        describe('Initial minting', async () => {
-            beforeEach(async () => {
-                contract.setMintingMode(MINT_MODE_DEVELOPMENT, {
-                    from: owner
-                })
-            })
-
-            it('mintCustomInitial mints NFT with given traits', async () => {
-                assert.equal(await contract.balanceOf(owner), 0)
-                const expectedTokenId = 0
-                const expectedTokenId2 = 1
-                const traits = 1234
-                const traits2 = 5678
-                const receipt = await contract.mintCustomInitial([traits, traits2], {
-                    from: owner
-                })
-
-                await expectEvent(receipt, 'FrameMinted', {
-                    id: '0',
-                    owner: owner
-                })
-                await expectEvent(receipt, 'FrameMinted', {
-                    id: '1',
-                    owner: owner
-                })
-                assert.equal(await contract.balanceOf(owner), 2)
-                assert.equal(await contract.ownerOf(expectedTokenId), owner)
-                assert.equal(await contract.ownerOf(expectedTokenId2), owner)
-                assert.equal(await contract.getTraits(expectedTokenId), traits)
-                assert.equal(await contract.getTraits(expectedTokenId2), traits2)
-            })
-
-            it('mintInitial mints amount of NFTs specified', async () => {
-                assert.equal(await contract.balanceOf(owner), 0)
-
-                const mintAmount = 4
-
-                const receipt = await contract.mintInitial(mintAmount, {
-                    from: owner
-                })
-                assert.equal(await contract.balanceOf(owner), mintAmount)
-
-                for (let tokenId = 0; tokenId < mintAmount; tokenId++) {
-                    await expectEvent(receipt, 'FrameMinted', {
-                        id: tokenId.toString(),
-                        owner: owner
-                    })
-
-                    assert.equal(await contract.ownerOf(tokenId), owner)
-                }
-            })
-        })
-
-        describe('Public minting', async () => {
-            beforeEach(async () => {
-                contract.setMintingMode(MINT_MODE_PUBLIC, {
-                    from: owner
-                })
-            })
-
-            it('public minting disallowed when no value passed', async () => {
-                await expectRevert(
-                    contract.mint({
-                        from: randomer
-                    }),
-                    'Insufficient funds'
-                )
-            })
-
-            it('public minting disallowed when value passed is less than public minting value', async () => {
-                await expectRevert(
-                    contract.mint({
-                        from: randomer,
-                        value: web3.utils.toWei('0.2499999999', 'ether')
-                    }),
-                    'Insufficient funds'
-                )
-            })
-
-            it('public minting allowed when value passed is equal to public minting value', async () => {
-                assert.equal(await contract.balanceOf(randomer), 0)
-
-                const receipt = await contract.mint({
-                    from: randomer,
-                    value: web3.utils.toWei('0.25', 'ether')
-                })
-
-                await expectEvent(receipt, 'FrameMinted', {
-                    id: '0',
-                    owner: randomer
-                })
-                assert.equal(await contract.balanceOf(randomer), 1)
-                assert.equal(await contract.ownerOf(0), randomer)
-            })
-        })
-
-        describe('Presale minting', async () => {
-            beforeEach(async () => {
-                contract.setMintingMode(MINT_MODE_PRESALE, {
-                    from: owner
-                })
-                contract.setPresaleMintingMerkleRoot(merkleData.merkleRoot, {
-                    from: owner
-                })
-            })
-
-            it('presale minting disallowed when no value is passed', async () => {
-                await expectRevert(
-                    contract.mintPresale(1, randomer, [], {
-                        from: randomer
-                    }),
-                    'Insufficient funds'
-                )
-            })
-
-            it('presale minting disallowed when value passed is less than presale minting value', async () => {
-                await expectRevert(
-                    contract.mintPresale(1, randomer, [], {
-                        from: randomer,
-                        value: web3.utils.toWei('0.149999999999', 'ether')
-                    }),
-                    'Insufficient funds'
-                )
-            })
-
-            it('presale minting disallowed account passed does not match account used for transaction', async () => {
-                await expectRevert(
-                    contract.mintPresale(1, randomer, [], {
-                        from: user,
-                        value: web3.utils.toWei('0.15', 'ether')
-                    }),
-                    'Account is not the presale account'
-                )
-            })
-            it('presale minting disallowed account when proofs do not match', async () => {
-                await expectRevert(
-                    contract.mintPresale(1, randomer, [], {
-                        from: randomer,
-                        value: web3.utils.toWei('0.15', 'ether')
-                    }),
-                    'Invalid proof.'
-                )
-            })
-            // TODO These tests pass when merkle data is correct but the addresses change when launching new ganache cli so need consistent addresses
-            // it('presale minting allowed when account passed matches account used for transaction and proofs match', async () => {
-            //     const claimData = merkleData.claims[randomer]
-
-            //     assert.equal(await contract.balanceOf(randomer), 0)
-            //     const receipt = await contract.mintPresale(claimData.index, randomer, claimData.proof, {
-            //         from: randomer,
-            //         value: web3.utils.toWei('0.15', 'ether')
-            //     })
-
-            //     await expectEvent(receipt, 'FrameMinted', {
-            //         id: '0',
-            //         owner: randomer
-            //     })
-            //     assert.equal(await contract.balanceOf(randomer), 1)
-            //     assert.equal(await contract.ownerOf(0), randomer)
-            // })
-
-            // it('presale minting disallowed after account has already minted', async () => {
-            //     const claimData = merkleData.claims[randomer]
-
-            //     await contract.mintPresale(claimData.index, randomer, claimData.proof, {
-            //         from: randomer,
-            //         value: web3.utils.toWei('0.15', 'ether')
-            //     })
-
-            //     await expectRevert(
-            //         contract.mintPresale(claimData.index, randomer, claimData.proof, {
-            //             from: randomer,
-            //             value: web3.utils.toWei('0.15', 'ether')
-            //         }),
-            //         'Address already minted'
-            //     )
-
-            //     assert.equal(await contract.ownerOf(0), randomer)
-            //     assert.equal(await contract.balanceOf(randomer), 1)
-            // })
+        it('has public mint price', async function () {
+            const publicMintPrice = await contract.MINT_PRICE_PUBLIC()
+            publicMintPrice.should.be.bignumber.equal(web3.utils.toWei('0.244', 'ether'))
         })
     })
 
@@ -398,14 +187,16 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                 from: owner
             })
 
-            await contract.mint({
+            await contract.mint(1, {
                 from: randomer,
-                value: web3.utils.toWei('0.25', 'ether')
+                value: web3.utils.toWei('0.244', 'ether')
             })
-            await contract.mint({
+
+            await contract.mint(1, {
                 from: user,
-                value: web3.utils.toWei('0.25', 'ether')
+                value: web3.utils.toWei('0.244', 'ether')
             })
+
             frameTokenIdRandomer = 0
             frameTokenIdUser = 1
 
@@ -416,7 +207,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
         describe('Setting frame content', async () => {
             it('setFrameContents erc721 on frame not owned by sender fails', async () => {
                 await expectRevert(
-                    contract.setFrameContents(frameTokenIdUser, this.mockERC721.address, tokenId, 1, {
+                    contract.setFrameContents(frameTokenIdUser, this.mockERC721.address, tokenId, 1, false, {
                         from: randomer
                     }),
                     'Not token owner'
@@ -425,7 +216,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
 
             it('setFrameContents erc1155 on frame not owned by sender fails', async () => {
                 await expectRevert(
-                    contract.setFrameContents(frameTokenIdUser, this.mockERC1155.address, tokenId, amount, {
+                    contract.setFrameContents(frameTokenIdUser, this.mockERC1155.address, tokenId, amount, false, {
                         from: randomer
                     }),
                     'Not token owner'
@@ -434,33 +225,102 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
 
             it('setFrameContents on frame that does not exist fails', async () => {
                 await expectRevert(
-                    contract.setFrameContents(123, this.mockERC1155.address, tokenId, amount, {
+                    contract.setFrameContents(123, this.mockERC1155.address, tokenId, amount, false, {
                         from: randomer
                     }),
-                    'Invalid Token ID'
+                    'ERC721: owner query for nonexistent token'
                 )
             })
 
             it('setFrameContents with non supported contract type fails', async () => {
                 await expectRevert.unspecified(
-                    contract.setFrameContents(frameTokenIdRandomer, this.mockERC20.address, tokenId, amount, {
+                    contract.setFrameContents(frameTokenIdRandomer, this.mockERC20.address, tokenId, amount, false, {
                         from: randomer
                     })
                 )
             })
 
+            it('setFrameContents with mockERC1155 without binding succeeds with correct info', async () => {
+                const receipt = await contract.setFrameContents(
+                    frameTokenIdRandomer,
+                    this.mockERC1155.address,
+                    tokenId,
+                    1,
+                    false,
+                    {
+                        from: randomer
+                    }
+                )
+
+                await expectEvent(receipt, 'FrameContentsUpdated', {
+                    id: web3.utils.toBN(frameTokenIdRandomer),
+                    contentsContract: this.mockERC1155.address,
+                    contentsId: web3.utils.toBN(tokenId),
+                    amount: web3.utils.toBN(1),
+                    bound: false
+                })
+            })
+
+            it('setFrameContents with ERC721 without binding succeeds with correct info', async () => {
+                const receipt = await contract.setFrameContents(
+                    frameTokenIdRandomer,
+                    this.mockERC721.address,
+                    tokenId,
+                    1,
+                    false,
+                    {
+                        from: randomer
+                    }
+                )
+
+                await expectEvent(receipt, 'FrameContentsUpdated', {
+                    id: web3.utils.toBN(frameTokenIdRandomer),
+                    contentsContract: this.mockERC721.address,
+                    contentsId: web3.utils.toBN(tokenId),
+                    amount: web3.utils.toBN(1),
+                    bound: false
+                })
+            })
+
+            it('setFrameContents with ERC721 when frame already has contents that is not bound succeeds', async () => {
+                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC721.address, tokenId, 1, false, {
+                    from: randomer
+                })
+
+                await mintTestERC721TokenWithId(randomer, tokenId + 1)
+
+                const receipt = await contract.setFrameContents(
+                    frameTokenIdRandomer,
+                    this.mockERC721.address,
+                    tokenId + 1,
+                    1,
+                    true,
+                    {
+                        from: randomer
+                    }
+                )
+
+                await expectEvent(receipt, 'FrameContentsUpdated', {
+                    id: web3.utils.toBN(frameTokenIdRandomer),
+                    contentsContract: this.mockERC721.address,
+                    contentsId: web3.utils.toBN(tokenId + 1),
+                    amount: web3.utils.toBN(1),
+                    bound: true
+                })
+            })
+
             it('setFrameContents with ERC721 when frame already has contents fails', async () => {
-                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC721.address, tokenId, 1, {
+                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC721.address, tokenId, 1, true, {
                     from: randomer
                 })
 
                 await mintTestERC721TokenWithId(randomer, tokenId + 1)
 
                 await expectRevert(
-                    contract.setFrameContents(frameTokenIdRandomer, this.mockERC721.address, tokenId + 1, 1, {
+                    contract.setFrameContents(frameTokenIdRandomer, this.mockERC721.address, tokenId + 1, 1, true, {
                         from: randomer
                     }),
-                    'Frame already contains an NFT'
+                    'Frame already contains bound content'
                 )
             })
 
@@ -470,6 +330,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                     this.mockERC721.address,
                     tokenId,
                     1,
+                    true,
                     {
                         from: randomer
                     }
@@ -478,7 +339,8 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                     id: web3.utils.toBN(frameTokenIdRandomer),
                     contentsContract: this.mockERC721.address,
                     contentsId: web3.utils.toBN(tokenId),
-                    amount: web3.utils.toBN(1)
+                    amount: web3.utils.toBN(1),
+                    bound: true
                 })
 
                 assert.equal(await this.mockERC721.ownerOf(tokenId), contract.address)
@@ -512,7 +374,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             })
 
             it('sending ERC721 NFT to Frame contract for frame that already contains contents fails', async () => {
-                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC721.address, tokenId, 1, {
+                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC721.address, tokenId, 1, true, {
                     from: randomer
                 })
 
@@ -533,12 +395,11 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                             from: randomer
                         }
                     ),
-                    'Frame already contains an NFT'
+                    'Frame already contains bound content'
                 )
                 await this.mockERC721.transferFrom(randomer, contract.address, tokenId + 1, {
                     from: randomer
                 })
-                console.log(await this.mockERC721.ownerOf(tokenId + 1) + ' ' + contract.address)
             })
 
             it('sending ERC721 NFT to Frame contract with correct data sets contents', async () => {
@@ -587,7 +448,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             })
 
             it('sending ERC1155 NFT to Frame contract for frame you do not own fails', async () => {
-                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC1155.address, tokenId, amount, {
+                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC1155.address, tokenId, amount, true, {
                     from: randomer
                 })
                 await mintTestERC1155Token(randomer, tokenId + 1, amount)
@@ -608,7 +469,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                             from: randomer
                         }
                     ),
-                    'Frame already contains an NFT'
+                    'Frame already contains bound content'
                 )
             })
 
@@ -658,16 +519,16 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             })
 
             it('setFrameContents with ERC1155 NFT when frame already has contents fails', async () => {
-                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC1155.address, tokenId, amount, {
+                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC1155.address, tokenId, amount, true, {
                     from: randomer
                 })
                 await mintTestERC1155Token(randomer, tokenId + 1, amount)
 
                 await expectRevert(
-                    contract.setFrameContents(frameTokenIdRandomer, this.mockERC1155.address, tokenId, amount, {
+                    contract.setFrameContents(frameTokenIdRandomer, this.mockERC1155.address, tokenId, amount, true, {
                         from: randomer
                     }),
-                    'Frame already contains an NFT'
+                    'Frame already contains bound content'
                 )
             })
 
@@ -677,6 +538,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                     this.mockERC1155.address,
                     tokenId,
                     amount,
+                    true,
                     {
                         from: randomer
                     }
@@ -685,7 +547,8 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                     id: web3.utils.toBN(frameTokenIdRandomer),
                     contentsContract: this.mockERC1155.address,
                     contentsId: web3.utils.toBN(tokenId),
-                    amount: web3.utils.toBN(amount)
+                    amount: web3.utils.toBN(amount),
+                    bound: true
                 })
 
                 assert.equal(await this.mockERC1155.balanceOf(contract.address, tokenId), amount)
@@ -702,16 +565,16 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
         describe('Removing frame content', async () => {
             let frameTokenIdRandomer2 = 2
             beforeEach(async () => {
-                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC1155.address, tokenId, amount, {
+                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC1155.address, tokenId, amount, true, {
                     from: randomer
                 })
 
-                await contract.mint({
+                await contract.mint(1, {
                     from: randomer,
                     value: web3.utils.toWei('0.25', 'ether')
                 })
 
-                await contract.setFrameContents(frameTokenIdRandomer2, this.mockERC721.address, tokenId, 1, {
+                await contract.setFrameContents(frameTokenIdRandomer2, this.mockERC721.address, tokenId, 1, true, {
                     from: randomer
                 })
             })
@@ -763,7 +626,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                     contract.removeFrameContents(123, {
                         from: randomer
                     }),
-                    'Invalid Token ID'
+                    'ERC721: owner query for nonexistent token'
                 )
             })
 
@@ -772,7 +635,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                     contract.removeFrameContents(frameTokenIdUser, {
                         from: user
                     }),
-                    'Frame does not contain an NFT'
+                    'Frame does not contain any content'
                 )
             })
         })
@@ -795,150 +658,6 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                 }),
                 'Does not have admin role'
             )
-        })
-
-        describe('rescueTokens', async () => {
-            beforeEach(async () => {
-                fundAccount(randomer, ONE_MILLION_TOKENS)
-                this.mockERC20.transfer(contract.address, ONE_MILLION_TOKENS, {
-                    from: randomer
-                })
-            })
-
-            it('rescueTokens disallowed from non admin account', async () => {
-                await expectRevert(
-                    contract.rescueTokens(this.mockERC20.address, {
-                        from: randomer
-                    }),
-                    'Does not have admin role'
-                )
-            })
-
-            it('rescueTokens allowed from admin account and transfers tokens to sender', async () => {
-                const ownerBalance = await this.mockERC20.balanceOf(owner)
-                await contract.rescueTokens(this.mockERC20.address, {
-                    from: owner
-                })
-
-                const contractBalanceAfter = await this.mockERC20.balanceOf(contract.address)
-                const ownerBalanceAfter = await this.mockERC20.balanceOf(owner)
-
-                contractBalanceAfter.should.be.bignumber.equal(new BN('0'))
-
-                ownerBalanceAfter.sub(ownerBalance).should.be.bignumber.equal(ONE_MILLION_TOKENS)
-            })
-        })
-
-        describe('withdrawFunds', async () => {
-            beforeEach(async () => {
-                contract.setMintingMode(MINT_MODE_PUBLIC, {
-                    from: owner
-                })
-
-                await contract.mint({
-                    from: randomer,
-                    value: web3.utils.toWei('0.25', 'ether')
-                })
-            })
-
-            it('withdrawFunds disallowed from non admin account', async () => {
-                await expectRevert(
-                    contract.withdrawFunds(user, {
-                        from: randomer
-                    }),
-                    'Does not have admin role'
-                )
-            })
-
-            it('withdrawFunds allowed from admin account and transfers funds to specified address', async () => {
-                const tracker = await balance.tracker(user) // instantiation
-
-                await contract.withdrawFunds(user, {
-                    from: owner
-                })
-
-                const deltaBalance = await tracker.delta()
-                deltaBalance.should.be.bignumber.equal(web3.utils.toWei('0.25', 'ether'))
-            })
-        })
-
-        describe('setPresaleMintingMerkleRoot', async () => {
-            it('setPresaleMintingMerkleRoot disallowed from non admin account', async () => {
-                await expectRevert(
-                    contract.setPresaleMintingMerkleRoot(merkleData.merkleRoot, {
-                        from: randomer
-                    }),
-                    'Does not have admin role'
-                )
-            })
-
-            it('setPresaleMintingMerkleRoot allowed from admin account', async () => {
-                const receipt = await contract.setPresaleMintingMerkleRoot(merkleData.merkleRoot, {
-                    from: owner
-                })
-                await expectEvent(receipt, 'PresaleMerkleRootSet', {
-                    merkleRoot: merkleData.merkleRoot
-                })
-            })
-
-            it('setPresaleMintingMerkleRoot not allowed to be changed once it has been set', async () => {
-                await contract.setPresaleMintingMerkleRoot(merkleData.merkleRoot, {
-                    from: owner
-                })
-                await expectRevert(
-                    contract.setPresaleMintingMerkleRoot(
-                        '0x63a727f718138b0a08d032346812ae97b7c5dbf4d1a4f1da857c4d7dadff776c',
-                        {
-                            from: owner
-                        }
-                    ),
-                    'Merkle root already set'
-                )
-            })
-        })
-
-        describe('setMintingMode', async () => {
-            it('setMintingMode disallowed from non admin account', async () => {
-                await expectRevert(
-                    contract.setMintingMode(MINT_MODE_DEVELOPMENT, {
-                        from: randomer
-                    }),
-                    'Does not have admin role'
-                )
-            })
-
-            it('setMintingMode fails if trying to set unsupported mode', async () => {
-                await expectRevert(
-                    contract.setMintingMode(4, {
-                        from: owner
-                    }),
-                    'Invalid mode'
-                )
-            })
-
-            it('setMintingMode to MINT_MODE_PRESALE sets mode successfully', async () => {
-                await contract.setMintingMode(MINT_MODE_PRESALE, {
-                    from: owner
-                })
-                assert.equal(await contract.mintMode(), MINT_MODE_PRESALE)
-            })
-
-            it('setMintingMode to MINT_MODE_PUBLIC sets mode successfully', async () => {
-                await contract.setMintingMode(MINT_MODE_PUBLIC, {
-                    from: owner
-                })
-                assert.equal(await contract.mintMode(), MINT_MODE_PUBLIC)
-            })
-
-            it('setMintingMode to MINT_MODE_DEVELOPMENT sets mode successfully', async () => {
-                await contract.setMintingMode(MINT_MODE_PUBLIC, {
-                    from: owner
-                })
-                await contract.setMintingMode(MINT_MODE_DEVELOPMENT, {
-                    from: owner
-                })
-                assert.equal(await contract.mintMode(), MINT_MODE_DEVELOPMENT)
-            })
         })
 
         it('setFrameTraitImageStorage disallowed from non admin account', async () => {

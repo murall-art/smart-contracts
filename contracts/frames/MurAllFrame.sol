@@ -14,21 +14,20 @@ import {IFrameImageStorage} from "./IFrameImageStorage.sol";
 import {IERC2981} from "../royalties/IERC2981.sol";
 import {IRoyaltyGovernor} from "../royalties/IRoyaltyGovernor.sol";
 import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
-import {MerkleTokenClaimDataManager} from "../distribution/MerkleTokenClaimDataManager.sol";
+import {ERC721MintManager} from "../distribution/ERC721MintManager.sol";
 
 /**
  * MurAll Frame contract
  */
 contract MurAllFrame is
-    ERC721,
     AccessControl,
     ReentrancyGuard,
     IERC2981,
     VRFConsumerBase,
     IERC721Receiver,
-    ERC1155Receiver
+    ERC1155Receiver,
+    ERC721MintManager
 {
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     using Strings for uint256;
     using ERC165Checker for address;
     /*
@@ -62,18 +61,6 @@ contract MurAllFrame is
 
     IFrameImageStorage public traitImageStorage;
     IRoyaltyGovernor public royaltyGovernorContract;
-    MerkleTokenClaimDataManager public presaleManager;
-
-    uint256 public constant MINT_MODE_DEVELOPMENT = 0;
-    uint256 public constant MINT_MODE_PUBLIC = 2;
-    uint256 public constant MINT_MODE_PRESALE = 1;
-    uint256 public mintMode = MINT_MODE_DEVELOPMENT;
-
-    uint256 public constant NUM_INITIAL_MINTABLE = 200;
-    uint256 public constant NUM_PRESALE_MINTABLE = 700;
-    uint256 public constant MINT_PRICE_PRESALE = 0.15 ether;
-    uint256 public constant MINT_PRICE_PUBLIC = 0.25 ether;
-    uint256 public constant MAX_SUPPLY = 2100;
 
     mapping(uint256 => uint256) private customFrameTraits;
 
@@ -81,6 +68,7 @@ contract MurAllFrame is
         address contractAddress;
         uint256 tokenId;
         uint256 amount;
+        bool bound;
     }
 
     mapping(uint256 => FrameContents) public frameContents;
@@ -93,13 +81,6 @@ contract MurAllFrame is
     event RandomnessRequested(bytes32 requestId);
     event TraitSeedSet(uint256 seed);
 
-    /** @dev Checks if sender address has admin role
-     */
-    modifier onlyAdmin() {
-        require(hasRole(ADMIN_ROLE, msg.sender), "Does not have admin role");
-        _;
-    }
-
     /** @dev Checks if token exists
      * @param _tokenId The token id to check if exists
      */
@@ -108,17 +89,16 @@ contract MurAllFrame is
         _;
     }
 
-    event FrameMinted(uint256 indexed id, address indexed owner);
     event FrameContentsUpdated(
         uint256 indexed id,
         address indexed contentsContract,
         uint256 contentsId,
-        uint256 amount
+        uint256 amount,
+        bool bound
     );
     event FrameContentsRemoved(uint256 indexed id);
     event RoyaltyGovernorContractChanged(address indexed royaltyGovernor);
     event FrameTraitImageStorageContractChanged(address indexed traitImageStorage);
-    event PresaleMerkleRootSet(bytes32 merkleRoot);
 
     constructor(
         address[] memory admins,
@@ -126,78 +106,24 @@ contract MurAllFrame is
         address _linkTokenAddr,
         bytes32 _keyHash,
         uint256 _fee
-    ) public ERC721("MurAll Frame", "FRAME") VRFConsumerBase(_vrfCoordinator, _linkTokenAddr) {
-        for (uint256 i = 0; i < admins.length; ++i) {
-            _setupRole(ADMIN_ROLE, admins[i]);
-        }
-
+    )
+        public
+        ERC721MintManager("Frames by MurAll", "FRAMES", admins, 4444, 436, 1004, 0.144 ether, 0.244 ether)
+        VRFConsumerBase(_vrfCoordinator, _linkTokenAddr)
+    {
         keyHash = _keyHash;
         fee = _fee;
+
+        _registerInterface(IERC721Receiver(0).onERC721Received.selector);
     }
 
-    function mint() external payable nonReentrant returns (uint256) {
-        require(mintMode == MINT_MODE_PUBLIC, "Public minting not enabled");
-        require(msg.value >= MINT_PRICE_PUBLIC, "Insufficient funds");
-        require(totalSupply() <= MAX_SUPPLY, "Maximum number of frames minted");
-
-        // mint a new frame
-        uint256 _id = totalSupply();
-        _mint(msg.sender, _id);
-        emit FrameMinted(_id, msg.sender);
-
-        return _id;
-    }
-
-    function mintPresale(
-        uint256 index,
-        address account,
-        bytes32[] calldata merkleProof
-    ) external payable nonReentrant returns (uint256) {
-        require(mintMode == MINT_MODE_PRESALE, "Presale minting not enabled");
-        require(msg.value >= MINT_PRICE_PRESALE, "Insufficient funds");
-        require(totalSupply() <= NUM_PRESALE_MINTABLE, "Maximum number of presale NFT's reached");
-        require(msg.sender == account, "Account is not the presale account");
-        require(address(presaleManager) != address(0), "Merkle root not set");
-        require(!presaleManager.hasClaimed(index), "Address already minted");
-        require(totalSupply() <= MAX_SUPPLY, "Maximum number of frames minted");
-
-        // Verify the merkle proof.
-        presaleManager.verifyAndSetClaimed(index, account, uint256(1), merkleProof);
-
-        // mint a new frame
-        uint256 _id = totalSupply();
-        _mint(msg.sender, _id);
-        emit FrameMinted(_id, msg.sender);
-
-        return _id;
-    }
-
-    function mintCustomInitial(uint256[] memory traitHash) public nonReentrant onlyAdmin {
-        require(totalSupply() <= NUM_INITIAL_MINTABLE, "Maximum number of initial NFT's reached");
+    function setCustomTraits(uint256[] memory traitHash, uint256 startIndex) public nonReentrant onlyAdmin {
+        require(traitSeed != 0, "Trait seed not set yet");
 
         for (uint256 i = 0; i < traitHash.length; ++i) {
+            uint256 randomIndex = (uint256(keccak256(abi.encode(traitSeed, i + startIndex))) % MAX_SUPPLY);
             require(traitHash[i] != 0, "Invalid trait hash");
-            require(totalSupply() <= MAX_SUPPLY, "Maximum number of frames minted");
-
-            // mint a new frame
-            uint256 _id = totalSupply();
-            _mint(msg.sender, _id);
-
-            customFrameTraits[_id] = traitHash[i];
-
-            emit FrameMinted(_id, msg.sender);
-        }
-    }
-
-    function mintInitial(uint256 amountToMint) public nonReentrant onlyAdmin returns (uint256) {
-        require(totalSupply() <= NUM_INITIAL_MINTABLE, "Maximum number of initial NFT's reached");
-
-        for (uint256 i = 0; i < amountToMint; ++i) {
-            require(totalSupply() <= MAX_SUPPLY, "Maximum number of frames minted");
-            // mint a new frame
-            uint256 _id = totalSupply();
-            _mint(msg.sender, _id);
-            emit FrameMinted(_id, msg.sender);
+            customFrameTraits[randomIndex] = traitHash[i];
         }
     }
 
@@ -211,22 +137,6 @@ contract MurAllFrame is
         _setBaseURI(_tokenUriBase);
     }
 
-    function rescueTokens(address tokenAddress) public onlyAdmin {
-        uint256 balance = IERC20(tokenAddress).balanceOf(address(this));
-        require(IERC20(tokenAddress).transfer(msg.sender, balance), "MurAllFrame: Transfer failed.");
-    }
-
-    function setMintingMode(uint256 mode) public onlyAdmin {
-        require(mode == MINT_MODE_PRESALE || mode == MINT_MODE_PUBLIC || mode == MINT_MODE_DEVELOPMENT, "Invalid mode");
-        mintMode = mode;
-    }
-
-    function setPresaleMintingMerkleRoot(bytes32 merkleRoot) public onlyAdmin {
-        require(address(presaleManager) == address(0), "Merkle root already set");
-        presaleManager = new MerkleTokenClaimDataManager(merkleRoot);
-        emit PresaleMerkleRootSet(merkleRoot);
-    }
-
     /**
      * @notice Set the frame trait image storage contract.
      * Only invokable by admin role.
@@ -235,11 +145,6 @@ contract MurAllFrame is
     function setFrameTraitImageStorage(IFrameImageStorage storageAddress) public onlyAdmin {
         traitImageStorage = IFrameImageStorage(storageAddress);
         emit FrameTraitImageStorageContractChanged(address(storageAddress));
-    }
-
-    function withdrawFunds(address payable _to) public onlyAdmin {
-        (bool success, ) = _to.call{value: address(this).balance}("");
-        require(success, "Failed to transfer the funds, aborting.");
     }
 
     /**
@@ -265,49 +170,80 @@ contract MurAllFrame is
         uint256 _tokenId,
         address contentContractAddress,
         uint256 contentTokenId,
-        uint256 contentAmount
-    ) public onlyExistingTokens(_tokenId) {
-        require(ownerOf(_tokenId) == msg.sender, "Not token owner");
-        require(!hasContentsInFrame(_tokenId), "Frame already contains an NFT"); // Also checks token exists
-        // use contract address to get contract instance as ERC721 instance
-        if (contentContractAddress.supportsInterface(_INTERFACE_ID_ERC721)) {
-            // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
-            IERC721(contentContractAddress).safeTransferFrom(
-                msg.sender,
-                address(this),
-                contentTokenId,
-                abi.encode(_tokenId, contentContractAddress)
-            );
-        } else if (contentContractAddress.supportsInterface(_INTERFACE_ID_ERC1155)) {
-            // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
-            IERC1155(contentContractAddress).safeTransferFrom(
-                msg.sender,
-                address(this),
-                contentTokenId,
-                contentAmount,
-                abi.encode(_tokenId, contentContractAddress)
-            );
+        uint256 contentAmount,
+        bool bindContentToFrame
+    ) public {
+        require(ownerOf(_tokenId) == msg.sender, "Not token owner"); // this will also fail if the token does not exist
+        if (bindContentToFrame) {
+            require(!frameContents[_tokenId].bound, "Frame already contains bound content");
+            if (contentContractAddress.supportsInterface(_INTERFACE_ID_ERC721)) {
+                // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
+                IERC721(contentContractAddress).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    contentTokenId,
+                    abi.encode(_tokenId, contentContractAddress)
+                );
+            } else if (contentContractAddress.supportsInterface(_INTERFACE_ID_ERC1155)) {
+                // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
+                IERC1155(contentContractAddress).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    contentTokenId,
+                    contentAmount,
+                    abi.encode(_tokenId, contentContractAddress)
+                );
+            } else revert();
         } else {
-            revert();
+            if (contentContractAddress.supportsInterface(_INTERFACE_ID_ERC721)) {
+                require(IERC721(contentContractAddress).ownerOf(contentTokenId) == msg.sender, "Not token owner");
+                createFrameContents(
+                    _tokenId,
+                    contentContractAddress,
+                    contentTokenId,
+                    contentAmount,
+                    bindContentToFrame
+                );
+            } else if (contentContractAddress.supportsInterface(_INTERFACE_ID_ERC1155)) {
+                require(
+                    IERC1155(contentContractAddress).balanceOf(msg.sender, contentTokenId) >= contentAmount,
+                    "Not enough tokens"
+                );
+                createFrameContents(
+                    _tokenId,
+                    contentContractAddress,
+                    contentTokenId,
+                    contentAmount,
+                    bindContentToFrame
+                );
+            } else {
+                revert();
+            }
         }
     }
 
-    function removeFrameContents(uint256 _tokenId) public onlyExistingTokens(_tokenId) {
-        require(ownerOf(_tokenId) == msg.sender, "Not token owner");
-        require(hasContentsInFrame(_tokenId), "Frame does not contain an NFT"); // Also checks token exists
+    function removeFrameContents(uint256 _tokenId) public {
+        require(ownerOf(_tokenId) == msg.sender, "Not token owner"); // this will also fail if the token does not exist
+        require(hasContentsInFrame(_tokenId), "Frame does not contain any content"); // Also checks token exists
         FrameContents memory _frameContents = frameContents[_tokenId];
-        if (_frameContents.contractAddress.supportsInterface(_INTERFACE_ID_ERC721)) {
-            // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
-            IERC721(_frameContents.contractAddress).safeTransferFrom(address(this), msg.sender, _frameContents.tokenId);
-        } else {
-            // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
-            IERC1155(_frameContents.contractAddress).safeTransferFrom(
-                address(this),
-                msg.sender,
-                _frameContents.tokenId,
-                _frameContents.amount,
-                ""
-            );
+        if (_frameContents.bound) {
+            if (_frameContents.contractAddress.supportsInterface(_INTERFACE_ID_ERC721)) {
+                // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
+                IERC721(_frameContents.contractAddress).safeTransferFrom(
+                    address(this),
+                    msg.sender,
+                    _frameContents.tokenId
+                );
+            } else {
+                // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
+                IERC1155(_frameContents.contractAddress).safeTransferFrom(
+                    address(this),
+                    msg.sender,
+                    _frameContents.tokenId,
+                    _frameContents.amount,
+                    ""
+                );
+            }
         }
 
         delete frameContents[_tokenId];
@@ -331,18 +267,15 @@ contract MurAllFrame is
     ) public virtual override returns (bytes4) {
         require(data.length != 0, "Invalid data - must contain target frame token id");
         (uint256 targetFrameTokenId, address contractAddress) = abi.decode(data, (uint256, address));
-        require(_exists(targetFrameTokenId), "Invalid Token ID");
-        require(ownerOf(targetFrameTokenId) == from, "Owner of target frame does not own the contents");
-        require(!hasContentsInFrame(targetFrameTokenId), "Frame already contains an NFT");
+        require(ownerOf(targetFrameTokenId) == from, "Owner of target frame does not own the contents"); // this will also fail if the token does not exist
+        require(!frameContents[targetFrameTokenId].bound, "Frame already contains bound content");
         require(
             contractAddress.supportsInterface(_INTERFACE_ID_ERC721) &&
                 IERC721(contractAddress).ownerOf(tokenId) == address(this),
             "Incorrect data"
         );
-        FrameContents memory newFrameContents = FrameContents(contractAddress, tokenId, 1);
-        frameContents[targetFrameTokenId] = newFrameContents;
+        createFrameContents(targetFrameTokenId, contractAddress, tokenId, 1, true);
 
-        emit FrameContentsUpdated(targetFrameTokenId, contractAddress, tokenId, 1);
         return this.onERC721Received.selector;
     }
 
@@ -355,18 +288,15 @@ contract MurAllFrame is
     ) public virtual override returns (bytes4) {
         require(data.length != 0, "Data must contain target frame id, owner and contract address");
         (uint256 targetFrameTokenId, address contractAddress) = abi.decode(data, (uint256, address));
-
-        require(!hasContentsInFrame(targetFrameTokenId), "Frame already contains an NFT"); // Also checks token exists
-        require(ownerOf(targetFrameTokenId) == from, "Owner of target frame does not own the contents");
+        require(ownerOf(targetFrameTokenId) == from, "Owner of target frame does not own the contents"); // this will also fail if the token does not exist
+        require(!frameContents[targetFrameTokenId].bound, "Frame already contains bound content"); // Also checks token exists
         require(
             contractAddress.supportsInterface(_INTERFACE_ID_ERC1155) &&
                 IERC1155(contractAddress).balanceOf(address(this), tokenId) == amount,
             "Incorrect data"
         );
-        FrameContents memory newFrameContents = FrameContents(contractAddress, tokenId, amount);
-        frameContents[targetFrameTokenId] = newFrameContents;
+        createFrameContents(targetFrameTokenId, contractAddress, tokenId, amount, true);
 
-        emit FrameContentsUpdated(targetFrameTokenId, contractAddress, tokenId, amount);
         return this.onERC1155Received.selector;
     }
 
@@ -414,6 +344,24 @@ contract MurAllFrame is
         )
     {
         return royaltyGovernorContract.royaltyInfo(_tokenId, _value, _data);
+    }
+
+    function createFrameContents(
+        uint256 _tokenId,
+        address contentContractAddress,
+        uint256 contentTokenId,
+        uint256 contentAmount,
+        bool bindContentToFrame
+    ) private onlyExistingTokens(_tokenId) {
+        FrameContents memory newFrameContents = FrameContents(
+            contentContractAddress,
+            contentTokenId,
+            contentAmount,
+            bindContentToFrame
+        );
+        frameContents[_tokenId] = newFrameContents;
+
+        emit FrameContentsUpdated(_tokenId, contentContractAddress, contentTokenId, contentAmount, bindContentToFrame);
     }
 
     fallback() external payable {}
