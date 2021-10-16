@@ -660,9 +660,9 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             )
         })
 
-        it('setFrameTraitImageStorage disallowed from non admin account', async () => {
+        it('setFrameTraitManager disallowed from non admin account', async () => {
             await expectRevert(
-                contract.setFrameTraitImageStorage(ZERO_ADDRESS, {
+                contract.setFrameTraitManager(ZERO_ADDRESS, {
                     from: randomer
                 }),
                 'Does not have admin role'

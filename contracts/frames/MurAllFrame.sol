@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {IFrameImageStorage} from "./IFrameImageStorage.sol";
+import {IFrameTraitManager} from "./IFrameTraitManager.sol";
 import {IERC2981} from "../royalties/IERC2981.sol";
 import {IRoyaltyGovernor} from "../royalties/IRoyaltyGovernor.sol";
 import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
@@ -59,7 +59,7 @@ contract MurAllFrame is
      */
     bytes4 private constant _INTERFACE_ID_ERC1155 = 0xd9b67a26;
 
-    IFrameImageStorage public traitImageStorage;
+    IFrameTraitManager public frameTraitManager;
     IRoyaltyGovernor public royaltyGovernorContract;
 
     mapping(uint256 => uint256) private customFrameTraits;
@@ -98,7 +98,7 @@ contract MurAllFrame is
     );
     event FrameContentsRemoved(uint256 indexed id);
     event RoyaltyGovernorContractChanged(address indexed royaltyGovernor);
-    event FrameTraitImageStorageContractChanged(address indexed traitImageStorage);
+    event FrameTraitManagerChanged(address indexed frameTraitManager);
 
     constructor(
         address[] memory admins,
@@ -138,13 +138,13 @@ contract MurAllFrame is
     }
 
     /**
-     * @notice Set the frame trait image storage contract.
+     * @notice Set the frame trait manager contract.
      * Only invokable by admin role.
-     * @param storageAddress the address of the frame trait image storage contract
+     * @param managerAddress the address of the frame trait image storage contract
      */
-    function setFrameTraitImageStorage(IFrameImageStorage storageAddress) public onlyAdmin {
-        traitImageStorage = IFrameImageStorage(storageAddress);
-        emit FrameTraitImageStorageContractChanged(address(storageAddress));
+    function setFrameTraitManager(IFrameTraitManager managerAddress) public onlyAdmin {
+        frameTraitManager = IFrameTraitManager(managerAddress);
+        emit FrameTraitManagerChanged(address(managerAddress));
     }
 
     /**
