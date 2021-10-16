@@ -10,17 +10,18 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
     bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    uint256 private constant MINT_MODE_DEVELOPMENT = 0;
-    uint256 private constant MINT_MODE_PUBLIC = 2;
-    uint256 private constant MINT_MODE_PRESALE = 1;
-    uint256 public mintMode = MINT_MODE_DEVELOPMENT;
+    uint64 private constant MINT_MODE_DEVELOPMENT = 0;
+    uint64 private constant MINT_MODE_PUBLIC = 2;
+    uint64 private constant MINT_MODE_PRESALE = 1;
+    uint64 public mintMode = MINT_MODE_DEVELOPMENT;
 
     uint256 public immutable MAX_SUPPLY;
 
-    uint256 public immutable NUM_INITIAL_MINTABLE;
-    uint256 public immutable NUM_PRESALE_MINTABLE;
     uint256 public immutable MINT_PRICE_PRESALE;
     uint256 public immutable MINT_PRICE_PUBLIC;
+    
+    uint128 public immutable NUM_INITIAL_MINTABLE;
+    uint128 public immutable NUM_PRESALE_MINTABLE;
 
     MerkleTokenClaimDataManager public presaleManager;
 
@@ -39,8 +40,8 @@ contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
         string memory symbol,
         address[] memory admins,
         uint256 _maxSupply,
-        uint256 _numInitialMintable,
-        uint256 _numPresaleMintable,
+        uint128 _numInitialMintable,
+        uint128 _numPresaleMintable,
         uint256 _presaleMintPrice,
         uint256 _publicMintPrice
     ) public ERC721(name, symbol) {
@@ -98,7 +99,7 @@ contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
         require(IERC20(tokenAddress).transfer(msg.sender, balance), "MurAllFrame: Transfer failed.");
     }
 
-    function setMintingMode(uint256 mode) public onlyAdmin {
+    function setMintingMode(uint64 mode) public onlyAdmin {
         require(mode == MINT_MODE_PRESALE || mode == MINT_MODE_PUBLIC || mode == MINT_MODE_DEVELOPMENT, "Invalid mode");
         mintMode = mode;
     }
