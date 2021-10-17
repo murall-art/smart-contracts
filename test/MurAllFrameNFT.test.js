@@ -4,6 +4,7 @@ const web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:7545'))
 const timeMachine = require('ganache-time-traveler')
 const { ZERO_ADDRESS } = require('@openzeppelin/test-helpers/src/constants')
 const MurAllFrame = artifacts.require('./frames/MurAllFrame.sol')
+const TestMurAllFrame = artifacts.require('./frames/TestMurAllFrame.sol')
 const MockERC721 = artifacts.require('./mock/MockERC721.sol')
 const MockERC1155 = artifacts.require('./mock/MockERC1155.sol')
 const MockERC20 = artifacts.require('./mock/MockERC20.sol')
@@ -15,11 +16,14 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
     const to18DP = value => {
         return new BN(value).mul(new BN('10').pow(new BN('18')))
     }
+    const toBN = value => {
+        return new BN(value)
+    }
     const ONE_MILLION_TOKENS = to18DP('1000000')
     const SECONDS_IN_1_DAY = 86400 //86400 seconds in a day
-    const MINT_MODE_DEVELOPMENT = 0
+
     const MINT_MODE_PUBLIC = 2
-    const MINT_MODE_PRESALE = 1
+
     const VRF_COORDINATOR_RINKEBY = '0x8C7382F9D8f56b33781fE506E897a4F1e2d17255'
     const LINK_TOKEN_RINKEBY = '0x326C977E6efc84E512bB9C30f76E30c160eD06FB'
     const KEYHASH_RINKEBY = '0x6e75b569a01ef56d18cab6a8e71e6600d6ce853834d4a5748b720d06f878b3a4'
@@ -640,6 +644,42 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             })
         })
     })
+    describe('VRF tests', async () => {
+        let randomness = 4321
+        let randomnessId = '0x0000000000000000000000000000000000000000000000000000000000000001'
+        beforeEach(async () => {
+            contract = await TestMurAllFrame.new(
+                [owner],
+                VRF_COORDINATOR_RINKEBY,
+                LINK_TOKEN_RINKEBY,
+                KEYHASH_RINKEBY,
+                BigInt(FEE_RINKEBY),
+                {
+                    from: owner
+                }
+            )
+
+            await contract.testFulfillRandomness(randomnessId, randomness, { from: owner })
+        })
+
+        it('setCustomTraits from admin account sets traits randomising from trait seed', async () => {
+            const expectedId = 2818
+            await contract.mintId(owner, expectedId, { from: owner })
+            let traits = await contract.getTraits(expectedId, {
+                from: owner
+            })
+
+            const newTrait = toBN(1)
+            const receipt = await contract.setCustomTraits([newTrait], 0, {
+                from: owner
+            })
+
+            traits = await contract.getTraits(expectedId, {
+                from: owner
+            })
+            expect(traits).to.be.bignumber.equal(newTrait)
+        })
+    })
 
     describe('Admin functions', async () => {
         it('requestTraitSeed disallowed from non admin account', async () => {
@@ -666,6 +706,24 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                     from: randomer
                 }),
                 'Does not have admin role'
+            )
+        })
+
+        it('setCustomTraits disallowed from non admin account', async () => {
+            await expectRevert(
+                contract.setCustomTraits([1, 2, 3, 4], 0, {
+                    from: randomer
+                }),
+                'Does not have admin role'
+            )
+        })
+
+        it('setCustomTraits disallowed when trait seed not set', async () => {
+            await expectRevert(
+                contract.setCustomTraits([1, 2, 3, 4], 0, {
+                    from: owner
+                }),
+                'Trait seed not set yet'
             )
         })
 

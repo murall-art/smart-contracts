@@ -19,7 +19,7 @@ contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
 
     uint256 public immutable MINT_PRICE_PRESALE;
     uint256 public immutable MINT_PRICE_PUBLIC;
-    
+
     uint128 public immutable NUM_INITIAL_MINTABLE;
     uint128 public immutable NUM_PRESALE_MINTABLE;
 
@@ -69,8 +69,9 @@ contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
     function mintPresale(
         uint256 index,
         address account,
-        uint256 amount,
-        bytes32[] calldata merkleProof
+        uint256 maxAmount,
+        bytes32[] calldata merkleProof,
+        uint256 amountDesired
     ) external payable nonReentrant {
         require(mintMode == MINT_MODE_PRESALE, "Presale minting not enabled");
         require(address(presaleManager) != address(0), "Merkle root not set");
@@ -80,9 +81,9 @@ contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
         uint256 maxIdMintable = NUM_INITIAL_MINTABLE + NUM_PRESALE_MINTABLE;
 
         // Verify the merkle proof.
-        presaleManager.verifyAndSetClaimed(index, account, amount, merkleProof);
-
-        for (uint256 i = 0; i < amount; ++i) {
+        presaleManager.verifyAndSetClaimed(index, account, maxAmount, merkleProof);
+        uint256 amountToMint = maxAmount < amountDesired ? maxAmount : amountDesired;
+        for (uint256 i = 0; i < amountToMint; ++i) {
             require(totalSupply() < maxIdMintable, "Maximum number of presale NFT's reached");
             mintInternal(msg.sender);
         }
@@ -96,7 +97,7 @@ contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
 
     function rescueTokens(address tokenAddress) public onlyAdmin {
         uint256 balance = IERC20(tokenAddress).balanceOf(address(this));
-        require(IERC20(tokenAddress).transfer(msg.sender, balance), "MurAllFrame: Transfer failed.");
+        require(IERC20(tokenAddress).transfer(msg.sender, balance), "rescueTokens: Transfer failed.");
     }
 
     function setMintingMode(uint64 mode) public onlyAdmin {

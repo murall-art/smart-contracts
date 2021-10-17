@@ -194,7 +194,7 @@ contract('ERC721MintManager', ([owner, user, randomer]) => {
 
         it('presale minting disallowed when presale minting flag is false', async () => {
             await expectRevert(
-                contract.mintPresale(1, randomer, 1, [], {
+                contract.mintPresale(1, randomer, 1, [], 1, {
                     from: randomer
                 }),
                 'Presale minting not enabled'
@@ -207,7 +207,7 @@ contract('ERC721MintManager', ([owner, user, randomer]) => {
             })
 
             await expectRevert(
-                contract.mintPresale(1, randomer, 1, [], {
+                contract.mintPresale(1, randomer, 1, [], 1, {
                     from: randomer,
                     value: web3.utils.toWei('0.15', 'ether')
                 }),
@@ -317,7 +317,7 @@ contract('ERC721MintManager', ([owner, user, randomer]) => {
 
             it('presale minting disallowed when no value is passed', async () => {
                 await expectRevert(
-                    contract.mintPresale(1, randomer, 1, [], {
+                    contract.mintPresale(1, randomer, 1, [], 1, {
                         from: randomer
                     }),
                     'Insufficient funds'
@@ -326,7 +326,7 @@ contract('ERC721MintManager', ([owner, user, randomer]) => {
 
             it('presale minting disallowed when value passed is less than presale minting value', async () => {
                 await expectRevert(
-                    contract.mintPresale(1, randomer, 1, [], {
+                    contract.mintPresale(1, randomer, 1, [], 1, {
                         from: randomer,
                         value: web3.utils.toWei('0.149999999999', 'ether')
                     }),
@@ -336,7 +336,7 @@ contract('ERC721MintManager', ([owner, user, randomer]) => {
 
             it('presale minting disallowed account passed does not match account used for transaction', async () => {
                 await expectRevert(
-                    contract.mintPresale(1, randomer, 1, [], {
+                    contract.mintPresale(1, randomer, 1, [], 1, {
                         from: user,
                         value: web3.utils.toWei('0.15', 'ether')
                     }),
@@ -345,7 +345,7 @@ contract('ERC721MintManager', ([owner, user, randomer]) => {
             })
             it('presale minting disallowed account when proofs do not match', async () => {
                 await expectRevert(
-                    contract.mintPresale(1, randomer, 1, [], {
+                    contract.mintPresale(1, randomer, 1, [], 1, {
                         from: randomer,
                         value: web3.utils.toWei('0.15', 'ether')
                     }),

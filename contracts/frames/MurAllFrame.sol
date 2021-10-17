@@ -117,12 +117,11 @@ contract MurAllFrame is
         _registerInterface(IERC721Receiver(0).onERC721Received.selector);
     }
 
-    function setCustomTraits(uint256[] memory traitHash, uint256 startIndex) public nonReentrant onlyAdmin {
+    function setCustomTraits(uint256[] memory traitHash, uint256 startIndex) public onlyAdmin {
         require(traitSeed != 0, "Trait seed not set yet");
 
         for (uint256 i = 0; i < traitHash.length; ++i) {
             uint256 randomIndex = (uint256(keccak256(abi.encode(traitSeed, i + startIndex))) % MAX_SUPPLY);
-            require(traitHash[i] != 0, "Invalid trait hash");
             customFrameTraits[randomIndex] = traitHash[i];
         }
     }
@@ -323,7 +322,6 @@ contract MurAllFrame is
      * Callback function used by VRF Coordinator
      */
     function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
-        require(traitSeed == 0, "Trait seed already requested");
         traitSeed = randomness;
         emit TraitSeedSet(randomness);
     }
