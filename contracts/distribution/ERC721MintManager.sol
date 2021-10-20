@@ -10,18 +10,15 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
     bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
-    uint64 private constant MINT_MODE_DEVELOPMENT = 0;
-    uint64 private constant MINT_MODE_PUBLIC = 2;
-    uint64 private constant MINT_MODE_PRESALE = 1;
-    uint64 public mintMode = MINT_MODE_DEVELOPMENT;
-
-    uint256 public immutable MAX_SUPPLY;
-
     uint256 public immutable MINT_PRICE_PRESALE;
     uint256 public immutable MINT_PRICE_PUBLIC;
 
-    uint128 public immutable NUM_INITIAL_MINTABLE;
-    uint128 public immutable NUM_PRESALE_MINTABLE;
+    uint64 public immutable MAX_SUPPLY;
+    uint64 public immutable NUM_INITIAL_MINTABLE;
+    uint64 public immutable NUM_PRESALE_MINTABLE;
+
+    enum MINTMODE {DEVELOPMENT, PRESALE, PUBLIC}
+    MINTMODE public mintMode = MINTMODE.DEVELOPMENT;
 
     MerkleTokenClaimDataManager public presaleManager;
 
@@ -39,9 +36,9 @@ contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
         string memory name,
         string memory symbol,
         address[] memory admins,
-        uint256 _maxSupply,
-        uint128 _numInitialMintable,
-        uint128 _numPresaleMintable,
+        uint64 _maxSupply,
+        uint64 _numInitialMintable,
+        uint64 _numPresaleMintable,
         uint256 _presaleMintPrice,
         uint256 _publicMintPrice
     ) public ERC721(name, symbol) {
@@ -57,7 +54,7 @@ contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
     }
 
     function mint(uint256 amount) external payable nonReentrant {
-        require(mintMode == MINT_MODE_PUBLIC, "Public minting not enabled");
+        require(mintMode == MINTMODE.PUBLIC, "Public minting not enabled");
         require(msg.value >= MINT_PRICE_PUBLIC, "Insufficient funds");
         require(amount <= 4 && balanceOf(msg.sender) <= 40, "Dont be greedy");
 
@@ -73,7 +70,7 @@ contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
         bytes32[] calldata merkleProof,
         uint256 amountDesired
     ) external payable nonReentrant {
-        require(mintMode == MINT_MODE_PRESALE, "Presale minting not enabled");
+        require(mintMode == MINTMODE.PRESALE, "Presale minting not enabled");
         require(address(presaleManager) != address(0), "Merkle root not set");
         require(msg.value >= MINT_PRICE_PRESALE, "Insufficient funds");
         require(msg.sender == account, "Account is not the presale account");
@@ -100,8 +97,7 @@ contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
         require(IERC20(tokenAddress).transfer(msg.sender, balance), "rescueTokens: Transfer failed.");
     }
 
-    function setMintingMode(uint64 mode) public onlyAdmin {
-        require(mode == MINT_MODE_PRESALE || mode == MINT_MODE_PUBLIC || mode == MINT_MODE_DEVELOPMENT, "Invalid mode");
+    function setMintingMode(MINTMODE mode) public onlyAdmin {
         mintMode = mode;
     }
 

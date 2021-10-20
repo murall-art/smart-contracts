@@ -508,7 +508,7 @@ contract('ERC721MintManager', ([owner, user, randomer]) => {
                     contract.setMintingMode(4, {
                         from: owner
                     }),
-                    'Invalid mode'
+                    'invalid opcode'
                 )
             })
 
