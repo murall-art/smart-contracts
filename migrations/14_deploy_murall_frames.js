@@ -1,4 +1,5 @@
 var MurAllFrame = artifacts.require('./frames/MurAllFrame.sol')
+var MintManager = artifacts.require('./distribution/MintManager.sol')
 
 const LINK_TOKEN_RINKEBY = '0x326C977E6efc84E512bB9C30f76E30c160eD06FB'
 const LINK_TOKEN_MAINNET = '0xb0897686c545045aFc77CF20eC7A532E3120E0F1'
@@ -10,7 +11,19 @@ const KEYHASH_MAINNET = '0xf86195cf7690c55907b2b611ebb7343a6f649bff128701cc542f0
 const FEE_RINKEBY = '100000000000000000' // 0.1 * 10**18 LINK for test chain
 const FEE_MAINNET = '2000000000000000000' // 2 * 10**18  LINK cost for Ethereum
 
+const FEE_PRESALE = '144000000000000000' // 0.144 ETH cost for presale
+const FEE_PUBLIC_SALE = '244000000000000000' // 0.244 ETH cost for public sale
+
 module.exports = async function (deployer, network, accounts) {
+    const admins = [
+        '0xCF90AD693aCe601b5B5582C4F95eC7266CDB3eEC',
+        '0x9388517B36B817DCCbb663a3097f4c5fFDBeCC14',
+        '0xF7A3bBe1711Eb43967cdbf58FA61342a25E3c845'
+    ]
+    await deployer.deploy(MintManager, admins, 436, 1004, BigInt(FEE_PRESALE), BigInt(FEE_PUBLIC_SALE))
+
+    mintManagerInstance = await MintManager.deployed()
+
     const linkTokenAddress = network == 'mainnet' ? LINK_TOKEN_MAINNET : LINK_TOKEN_RINKEBY
     const vrfAddress = network == 'mainnet' ? VRF_COORDINATOR_MAINNET : VRF_COORDINATOR_RINKEBY
     const keyhash = network == 'mainnet' ? KEYHASH_MAINNET : KEYHASH_RINKEBY
@@ -18,11 +31,8 @@ module.exports = async function (deployer, network, accounts) {
 
     await deployer.deploy(
         MurAllFrame,
-        [
-            '0xCF90AD693aCe601b5B5582C4F95eC7266CDB3eEC',
-            '0x9388517B36B817DCCbb663a3097f4c5fFDBeCC14',
-            '0xF7A3bBe1711Eb43967cdbf58FA61342a25E3c845'
-        ],
+        admins,
+        mintManagerInstance.address,
         vrfAddress,
         linkTokenAddress,
         keyhash,
@@ -30,4 +40,6 @@ module.exports = async function (deployer, network, accounts) {
     )
 
     MurAllFrameInstance = await MurAllFrame.deployed()
+
+    await mintManagerInstance.setToken(MurAllFrameInstance.address)
 }

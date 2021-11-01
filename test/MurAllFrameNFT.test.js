@@ -9,6 +9,8 @@ const MockERC721 = artifacts.require('./mock/MockERC721.sol')
 const MockERC1155 = artifacts.require('./mock/MockERC1155.sol')
 const MockERC20 = artifacts.require('./mock/MockERC20.sol')
 const TimeHelper = artifacts.require('./mock/TimeHelper.sol')
+const MintManager = artifacts.require('./distribution/MintManager.sol')
+
 require('chai').should()
 const { expect } = require('chai')
 
@@ -22,7 +24,15 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
     const ONE_MILLION_TOKENS = to18DP('1000000')
     const SECONDS_IN_1_DAY = 86400 //86400 seconds in a day
 
+    const MAX_SUPPLY = 4444
+    const INITIAL_MINTABLE = 436
+    const NUM_PRESALE_MINTABLE = 1004
+    const PRESALE_MINT_PRICE = web3.utils.toWei('0.144', 'ether')
+    const PUBLIC_MINT_PRICE = web3.utils.toWei('0.244', 'ether')
+
+    const MINT_MODE_DEVELOPMENT = 0
     const MINT_MODE_PUBLIC = 2
+    const MINT_MODE_PRESALE = 1
 
     const VRF_COORDINATOR_RINKEBY = '0x8C7382F9D8f56b33781fE506E897a4F1e2d17255'
     const LINK_TOKEN_RINKEBY = '0x326C977E6efc84E512bB9C30f76E30c160eD06FB'
@@ -110,8 +120,18 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
     let contract
 
     beforeEach(async () => {
+        this.mintManager = await MintManager.new(
+            [owner],
+            INITIAL_MINTABLE,
+            NUM_PRESALE_MINTABLE,
+            PRESALE_MINT_PRICE,
+            PUBLIC_MINT_PRICE,
+            { from: owner }
+        )
+
         contract = await MurAllFrame.new(
             [owner],
+            this.mintManager.address,
             VRF_COORDINATOR_RINKEBY,
             LINK_TOKEN_RINKEBY,
             KEYHASH_RINKEBY,
@@ -120,6 +140,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                 from: owner
             }
         )
+        this.mintManager.setToken(contract.address, { from: owner })
 
         this.mockERC721 = await MockERC721.new('Return of the mock', 'ROTM', {
             from: owner
@@ -157,22 +178,209 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             assert.equal(await contract.MAX_SUPPLY(), 4444)
         })
 
-        it('has a max number initially mintable by admins', async function () {
-            assert.equal(await contract.NUM_INITIAL_MINTABLE(), 436)
+        it('sets admin role correctly', async function () {
+            assert.isTrue(await contract.hasRole(web3.utils.sha3('ADMIN_ROLE'), owner))
+        })
+    })
+
+    describe('Minting', async () => {
+        it('public minting disallowed when public minting flag is false', async () => {
+            await expectRevert(
+                contract.mint(1, {
+                    from: randomer
+                }),
+                'Public minting not enabled'
+            )
         })
 
-        it('has a max number mintable by presale', async function () {
-            assert.equal(await contract.NUM_PRESALE_MINTABLE(), 1004)
+        it('presale minting disallowed when presale minting flag is false', async () => {
+            await expectRevert(
+                contract.mintPresale(1, 1, [], 1, {
+                    from: randomer
+                }),
+                'Presale minting not enabled'
+            )
         })
 
-        it('has presale mint price', async function () {
-            const presaleMintPrice = await contract.MINT_PRICE_PRESALE()
-            presaleMintPrice.should.be.bignumber.equal(web3.utils.toWei('0.144', 'ether'))
+        it('presale minting disallowed when merkle root has not been set', async () => {
+            this.mintManager.setMintingMode(MINT_MODE_PRESALE, {
+                from: owner
+            })
+
+            await expectRevert(
+                contract.mintPresale(1, 1, [], 1, {
+                    from: randomer,
+                    value: PRESALE_MINT_PRICE
+                }),
+                'Merkle root not set'
+            )
         })
 
-        it('has public mint price', async function () {
-            const publicMintPrice = await contract.MINT_PRICE_PUBLIC()
-            publicMintPrice.should.be.bignumber.equal(web3.utils.toWei('0.244', 'ether'))
+        it('initial minting disallowed from non-admin account', async () => {
+            await expectRevert(
+                contract.mintInitial(1, {
+                    from: randomer
+                }),
+                'Does not have admin role'
+            )
+        })
+
+        describe('Initial minting', async () => {
+            beforeEach(async () => {
+                this.mintManager.setMintingMode(MINT_MODE_DEVELOPMENT, {
+                    from: owner
+                })
+            })
+
+            it('mintInitial mints amount of NFTs specified', async () => {
+                assert.equal(await contract.balanceOf(owner), 0)
+
+                const mintAmount = 4
+
+                const receipt = await contract.mintInitial(mintAmount, {
+                    from: owner
+                })
+                assert.equal(await contract.balanceOf(owner), mintAmount)
+
+                for (let tokenId = 0; tokenId < mintAmount; tokenId++) {
+                    await expectEvent(receipt, 'FrameMinted', {
+                        id: tokenId.toString(),
+                        owner: owner
+                    })
+
+                    assert.equal(await contract.ownerOf(tokenId), owner)
+                }
+            })
+        })
+
+        describe('Public minting', async () => {
+            beforeEach(async () => {
+                this.mintManager.setMintingMode(MINT_MODE_PUBLIC, {
+                    from: owner
+                })
+            })
+
+            it('public minting disallowed when no value passed', async () => {
+                await expectRevert(
+                    contract.mint(1, {
+                        from: randomer
+                    }),
+                    'Insufficient funds'
+                )
+            })
+
+            it('public minting disallowed when value passed is less than public minting value', async () => {
+                await expectRevert(
+                    contract.mint(1, {
+                        from: randomer,
+                        value: web3.utils.toWei('0.2399999999', 'ether')
+                    }),
+                    'Insufficient funds'
+                )
+            })
+
+            it('public minting disallowed when attempting to mint more than 4 in a transaction', async () => {
+                await expectRevert(
+                    contract.mint(5, {
+                        from: randomer,
+                        value: web3.utils.toWei('1.25', 'ether')
+                    }),
+                    'Amount exceeds allowance per tx'
+                )
+            })
+
+            it('public minting allowed when value passed is equal to public minting value', async () => {
+                assert.equal(await contract.balanceOf(randomer), 0)
+
+                const receipt = await contract.mint(1, {
+                    from: randomer,
+                    value: PUBLIC_MINT_PRICE
+                })
+
+                await expectEvent(receipt, 'FrameMinted', {
+                    id: '0',
+                    owner: randomer
+                })
+                assert.equal(await contract.balanceOf(randomer), 1)
+                assert.equal(await contract.ownerOf(0), randomer)
+            })
+        })
+
+        describe('Presale minting', async () => {
+            beforeEach(async () => {
+                this.mintManager.setMintingMode(MINT_MODE_PRESALE, {
+                    from: owner
+                })
+                this.mintManager.setPresaleMintingMerkleRoot(merkleData.merkleRoot, {
+                    from: owner
+                })
+            })
+
+            it('presale minting disallowed when no value is passed', async () => {
+                await expectRevert(
+                    contract.mintPresale(1, 1, [], 1, {
+                        from: randomer
+                    }),
+                    'Insufficient funds'
+                )
+            })
+
+            it('presale minting disallowed when value passed is less than presale minting value', async () => {
+                await expectRevert(
+                    contract.mintPresale(1, 1, [], 1, {
+                        from: randomer,
+                        value: web3.utils.toWei('0.139999999999', 'ether')
+                    }),
+                    'Insufficient funds'
+                )
+            })
+
+            it('presale minting disallowed account when proofs do not match', async () => {
+                await expectRevert(
+                    contract.mintPresale(1, 1, [], 1, {
+                        from: randomer,
+                        value: PRESALE_MINT_PRICE
+                    }),
+                    'Invalid proof.'
+                )
+            })
+            // TODO These tests pass when merkle data is correct but the addresses change when launching new ganache cli so need consistent addresses
+            // it('presale minting allowed when account passed matches account used for transaction and proofs match', async () => {
+            //     const claimData = merkleData.claims[randomer]
+
+            //     assert.equal(await contract.balanceOf(randomer), 0)
+            //     const receipt = await contract.mintPresale(claimData.index, randomer, claimData.proof, {
+            //         from: randomer,
+            //         value: PRESALE_MINT_PRICE
+            //     })
+
+            //     await expectEvent(receipt, 'Minted', {
+            //         id: '0',
+            //         owner: randomer
+            //     })
+            //     assert.equal(await contract.balanceOf(randomer), 1)
+            //     assert.equal(await contract.ownerOf(0), randomer)
+            // })
+
+            // it('presale minting disallowed after account has already minted', async () => {
+            //     const claimData = merkleData.claims[randomer]
+
+            //     await contract.mintPresale(claimData.index, randomer, claimData.proof, {
+            //         from: randomer,
+            //         value: PRESALE_MINT_PRICE
+            //     })
+
+            //     await expectRevert(
+            //         contract.mintPresale(claimData.index, randomer, claimData.proof, {
+            //             from: randomer,
+            //             value: PRESALE_MINT_PRICE
+            //         }),
+            //         'Address already minted'
+            //     )
+
+            //     assert.equal(await contract.ownerOf(0), randomer)
+            //     assert.equal(await contract.balanceOf(randomer), 1)
+            // })
         })
     })
 
@@ -187,7 +395,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             await mintTestERC1155Token(randomer, tokenId, amount)
             await mintTestERC721TokenWithId(randomer, tokenId)
 
-            await contract.setMintingMode(MINT_MODE_PUBLIC, {
+            await this.mintManager.setMintingMode(MINT_MODE_PUBLIC, {
                 from: owner
             })
 
@@ -575,7 +783,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
 
                 await contract.mint(1, {
                     from: randomer,
-                    value: web3.utils.toWei('0.25', 'ether')
+                    value: PUBLIC_MINT_PRICE
                 })
 
                 await contract.setFrameContents(frameTokenIdRandomer2, this.mockERC721.address, tokenId, 1, true, {
@@ -650,6 +858,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
         beforeEach(async () => {
             contract = await TestMurAllFrame.new(
                 [owner],
+                this.mintManager.address,
                 VRF_COORDINATOR_RINKEBY,
                 LINK_TOKEN_RINKEBY,
                 KEYHASH_RINKEBY,
@@ -725,6 +934,71 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                 }),
                 'Trait seed not set yet'
             )
+        })
+
+        describe('rescueTokens', async () => {
+            beforeEach(async () => {
+                fundAccount(randomer, ONE_MILLION_TOKENS)
+                this.mockERC20.transfer(contract.address, ONE_MILLION_TOKENS, {
+                    from: randomer
+                })
+            })
+
+            it('rescueTokens disallowed from non admin account', async () => {
+                await expectRevert(
+                    contract.rescueTokens(this.mockERC20.address, {
+                        from: randomer
+                    }),
+                    'Does not have admin role'
+                )
+            })
+
+            it('rescueTokens allowed from admin account and transfers tokens to sender', async () => {
+                const ownerBalance = await this.mockERC20.balanceOf(owner)
+                await contract.rescueTokens(this.mockERC20.address, {
+                    from: owner
+                })
+
+                const contractBalanceAfter = await this.mockERC20.balanceOf(contract.address)
+                const ownerBalanceAfter = await this.mockERC20.balanceOf(owner)
+
+                contractBalanceAfter.should.be.bignumber.equal(new BN('0'))
+
+                ownerBalanceAfter.sub(ownerBalance).should.be.bignumber.equal(ONE_MILLION_TOKENS)
+            })
+        })
+
+        describe('withdrawFunds', async () => {
+            beforeEach(async () => {
+                this.mintManager.setMintingMode(MINT_MODE_PUBLIC, {
+                    from: owner
+                })
+
+                await contract.mint(1, {
+                    from: randomer,
+                    value: web3.utils.toWei('0.25', 'ether')
+                })
+            })
+
+            it('withdrawFunds disallowed from non admin account', async () => {
+                await expectRevert(
+                    contract.withdrawFunds(user, {
+                        from: randomer
+                    }),
+                    'Does not have admin role'
+                )
+            })
+
+            it('withdrawFunds allowed from admin account and transfers funds to specified address', async () => {
+                const tracker = await balance.tracker(user) // instantiation
+
+                await contract.withdrawFunds(user, {
+                    from: owner
+                })
+
+                const deltaBalance = await tracker.delta()
+                deltaBalance.should.be.bignumber.equal(web3.utils.toWei('0.25', 'ether'))
+            })
         })
 
         describe('setTokenUriBase', async () => {

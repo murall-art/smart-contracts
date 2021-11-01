@@ -14,7 +14,7 @@ import {IFrameTraitManager} from "./IFrameTraitManager.sol";
 import {IERC2981} from "../royalties/IERC2981.sol";
 import {IRoyaltyGovernor} from "../royalties/IRoyaltyGovernor.sol";
 import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
-import {ERC721MintManager} from "../distribution/ERC721MintManager.sol";
+import {MintManager} from "../distribution/MintManager.sol";
 
 /**
  * MurAll Frame contract
@@ -26,8 +26,10 @@ contract MurAllFrame is
     VRFConsumerBase,
     IERC721Receiver,
     ERC1155Receiver,
-    ERC721MintManager
+    ERC721
 {
+    bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+
     using Strings for uint256;
     using ERC165Checker for address;
     /*
@@ -59,7 +61,10 @@ contract MurAllFrame is
      */
     bytes4 private constant _INTERFACE_ID_ERC1155 = 0xd9b67a26;
 
+    uint64 public immutable MAX_SUPPLY = 4444;
+
     IFrameTraitManager public frameTraitManager;
+    MintManager public mintManager;
     IRoyaltyGovernor public royaltyGovernorContract;
 
     mapping(uint256 => uint256) private customFrameTraits;
@@ -89,6 +94,13 @@ contract MurAllFrame is
         _;
     }
 
+    /** @dev Checks if sender address has admin role
+     */
+    modifier onlyAdmin() {
+        require(hasRole(ADMIN_ROLE, msg.sender), "Does not have admin role");
+        _;
+    }
+
     event FrameContentsUpdated(
         uint256 indexed id,
         address indexed contentsContract,
@@ -99,21 +111,24 @@ contract MurAllFrame is
     event FrameContentsRemoved(uint256 indexed id);
     event RoyaltyGovernorContractChanged(address indexed royaltyGovernor);
     event FrameTraitManagerChanged(address indexed frameTraitManager);
+    event FrameMinted(uint256 indexed id, address indexed owner);
 
     constructor(
         address[] memory admins,
+        MintManager _mintManager,
         address _vrfCoordinator,
         address _linkTokenAddr,
         bytes32 _keyHash,
         uint256 _fee
-    )
-        public
-        ERC721MintManager("Frames by MurAll", "FRAMES", admins, 4444, 436, 1004, 0.144 ether, 0.244 ether)
-        VRFConsumerBase(_vrfCoordinator, _linkTokenAddr)
-    {
+    ) public ERC721("Frames by MurAll", "FRAMES") VRFConsumerBase(_vrfCoordinator, _linkTokenAddr) {
+        for (uint256 i = 0; i < admins.length; ++i) {
+            _setupRole(ADMIN_ROLE, admins[i]);
+        }
         keyHash = _keyHash;
         fee = _fee;
 
+        // mintManager = new MintManager(this, admins, 436, 1004, 0.144 ether, 0.244 ether);
+        mintManager = _mintManager;
         _registerInterface(IERC721Receiver(0).onERC721Received.selector);
     }
 
@@ -360,6 +375,52 @@ contract MurAllFrame is
         frameContents[_tokenId] = newFrameContents;
 
         emit FrameContentsUpdated(_tokenId, contentContractAddress, contentTokenId, contentAmount, bindContentToFrame);
+    }
+
+    function mint(uint256 amount) public payable nonReentrant {
+        mintManager.checkCanMintPublic(msg.sender, msg.value, amount);
+        for (uint256 i = 0; i < amount; ++i) {
+            mintInternal(msg.sender);
+        }
+    }
+
+    function mintPresale(
+        uint256 index,
+        uint256 maxAmount,
+        bytes32[] calldata merkleProof,
+        uint256 amountDesired
+    ) public payable nonReentrant {
+        mintManager.checkCanMintPresale(msg.sender, msg.value, index, maxAmount, merkleProof, amountDesired);
+
+        uint256 amountToMint = maxAmount < amountDesired ? maxAmount : amountDesired;
+        for (uint256 i = 0; i < amountToMint; ++i) {
+            mintInternal(msg.sender);
+        }
+    }
+
+    function mintInitial(uint256 amountToMint) public nonReentrant onlyAdmin returns (uint256) {
+        mintManager.checkCanMintInitial(amountToMint);
+        for (uint256 i = 0; i < amountToMint; ++i) {
+            mintInternal(msg.sender);
+        }
+    }
+
+    function mintInternal(address account) private {
+        require(totalSupply() <= MAX_SUPPLY, "Maximum number of NFTs minted");
+        // mint a new frame
+        uint256 _id = totalSupply();
+        _mint(account, _id);
+        emit FrameMinted(_id, account);
+    }
+
+    function withdrawFunds(address payable _to) public onlyAdmin {
+        (bool success, ) = _to.call{value: address(this).balance}("");
+        require(success, "Failed to transfer the funds, aborting.");
+    }
+
+    function rescueTokens(address tokenAddress) public onlyAdmin {
+        uint256 balance = IERC20(tokenAddress).balanceOf(address(this));
+        require(IERC20(tokenAddress).transfer(msg.sender, balance), "rescueTokens: Transfer failed.");
     }
 
     fallback() external payable {}

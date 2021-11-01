@@ -7,15 +7,15 @@ import {MerkleTokenClaimDataManager} from "../distribution/MerkleTokenClaimDataM
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
-contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
+contract MintManager is AccessControl, ReentrancyGuard {
     bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-
-    uint256 public immutable MINT_PRICE_PRESALE;
-    uint256 public immutable MINT_PRICE_PUBLIC;
-
-    uint64 public immutable MAX_SUPPLY;
+    uint64 public constant MAX_MINTABLE_PER_TX = 4;
+    uint64 public constant MAX_MINTABLE_PUBLIC = 40;
     uint64 public immutable NUM_INITIAL_MINTABLE;
     uint64 public immutable NUM_PRESALE_MINTABLE;
+
+    uint256 public mintPricePresale;
+    uint256 public mintPricePublic;
 
     enum MINTMODE {DEVELOPMENT, PRESALE, PUBLIC}
     MINTMODE public mintMode = MINTMODE.DEVELOPMENT;
@@ -23,7 +23,8 @@ contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
     MerkleTokenClaimDataManager public presaleManager;
 
     event PresaleMerkleRootSet(bytes32 merkleRoot);
-    event Minted(uint256 indexed id, address indexed owner);
+
+    ERC721 public token;
 
     /** @dev Checks if sender address has admin role
      */
@@ -33,57 +34,68 @@ contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
     }
 
     constructor(
-        string memory name,
-        string memory symbol,
         address[] memory admins,
-        uint64 _maxSupply,
         uint64 _numInitialMintable,
         uint64 _numPresaleMintable,
         uint256 _presaleMintPrice,
         uint256 _publicMintPrice
-    ) public ERC721(name, symbol) {
+    ) public {
         for (uint256 i = 0; i < admins.length; ++i) {
             _setupRole(ADMIN_ROLE, admins[i]);
         }
 
-        MAX_SUPPLY = _maxSupply;
         NUM_INITIAL_MINTABLE = _numInitialMintable;
         NUM_PRESALE_MINTABLE = _numPresaleMintable;
-        MINT_PRICE_PRESALE = _presaleMintPrice;
-        MINT_PRICE_PUBLIC = _publicMintPrice;
+        mintPricePresale = _presaleMintPrice;
+        mintPricePublic = _publicMintPrice;
     }
 
-    function mint(uint256 amount) external payable nonReentrant {
+    function setToken(ERC721 _token) public onlyAdmin {
+        token = _token;
+    }
+
+    function checkCanMintPublic(
+        address minterAddress,
+        uint256 value,
+        uint256 amount
+    ) external nonReentrant {
+        require(amount > 0, "Amount must be greater than 0");
         require(mintMode == MINTMODE.PUBLIC, "Public minting not enabled");
-        require(msg.value >= MINT_PRICE_PUBLIC, "Insufficient funds");
-        require(amount <= 4 && balanceOf(msg.sender) <= 40, "Dont be greedy");
-
-        for (uint256 i = 0; i < amount; ++i) {
-            mintInternal(msg.sender);
-        }
+        require(value >= mintPricePublic, "Insufficient funds");
+        require(amount <= MAX_MINTABLE_PER_TX, "Amount exceeds allowance per tx");
+        require(
+            token.balanceOf(minterAddress) + amount <= MAX_MINTABLE_PUBLIC,
+            "Amount requested will exceed address allowance"
+        );
     }
 
-    function mintPresale(
+    function checkCanMintPresale(
+        address minterAddress,
+        uint256 value,
         uint256 index,
-        address account,
         uint256 maxAmount,
         bytes32[] calldata merkleProof,
         uint256 amountDesired
-    ) external payable nonReentrant {
+    ) external nonReentrant {
+        require(amountDesired > 0, "Amount must be greater than 0");
+        require(
+            token.totalSupply() + amountDesired <= NUM_INITIAL_MINTABLE + NUM_PRESALE_MINTABLE,
+            "Amount will exceed maximum number of presale NFTs"
+        );
         require(mintMode == MINTMODE.PRESALE, "Presale minting not enabled");
         require(address(presaleManager) != address(0), "Merkle root not set");
-        require(msg.value >= MINT_PRICE_PRESALE, "Insufficient funds");
-        require(msg.sender == account, "Account is not the presale account");
+        require(value >= mintPricePresale, "Insufficient funds");
         require(!presaleManager.hasClaimed(index), "Address already minted");
-        uint256 maxIdMintable = NUM_INITIAL_MINTABLE + NUM_PRESALE_MINTABLE;
 
         // Verify the merkle proof.
-        presaleManager.verifyAndSetClaimed(index, account, maxAmount, merkleProof);
-        uint256 amountToMint = maxAmount < amountDesired ? maxAmount : amountDesired;
-        for (uint256 i = 0; i < amountToMint; ++i) {
-            require(totalSupply() < maxIdMintable, "Maximum number of presale NFT's reached");
-            mintInternal(msg.sender);
-        }
+        presaleManager.verifyAndSetClaimed(index, minterAddress, maxAmount, merkleProof);
+    }
+
+    function checkCanMintInitial(uint256 amountToMint) public nonReentrant returns (uint256) {
+        require(
+            token.totalSupply() + amountToMint <= NUM_INITIAL_MINTABLE,
+            "Amount will exceed maximum number of initial NFTs"
+        );
     }
 
     function setPresaleMintingMerkleRoot(bytes32 merkleRoot) public onlyAdmin {
@@ -97,27 +109,20 @@ contract ERC721MintManager is ERC721, AccessControl, ReentrancyGuard {
         require(IERC20(tokenAddress).transfer(msg.sender, balance), "rescueTokens: Transfer failed.");
     }
 
-    function setMintingMode(MINTMODE mode) public onlyAdmin {
-        mintMode = mode;
+    function setPublicSalePrice(uint256 price) public onlyAdmin {
+        mintPricePublic = price;
     }
 
-    function mintInitial(uint256 amountToMint) public nonReentrant onlyAdmin returns (uint256) {
-        for (uint256 i = 0; i < amountToMint; ++i) {
-            require(totalSupply() <= NUM_INITIAL_MINTABLE, "Maximum number of initial NFTs reached");
-            mintInternal(msg.sender);
-        }
+    function setPresalePrice(uint256 price) public onlyAdmin {
+        mintPricePresale = price;
+    }
+
+    function setMintingMode(MINTMODE mode) public onlyAdmin {
+        mintMode = mode;
     }
 
     function withdrawFunds(address payable _to) public onlyAdmin {
         (bool success, ) = _to.call{value: address(this).balance}("");
         require(success, "Failed to transfer the funds, aborting.");
-    }
-
-    function mintInternal(address account) internal {
-        require(totalSupply() <= MAX_SUPPLY, "Maximum number of NFTs minted");
-        // mint a new frame
-        uint256 _id = totalSupply();
-        _mint(account, _id);
-        emit Minted(_id, account);
     }
 }
