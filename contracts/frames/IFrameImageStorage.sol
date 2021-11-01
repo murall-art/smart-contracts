@@ -2,7 +2,5 @@
 pragma solidity ^0.6.0;
 
 interface IFrameImageStorage {
-    function getImageForTraitData(
-        uint256 traitHash
-    ) external view returns (string memory);
+    function getImageForTraitData(uint256 traitHash) external view returns (string memory);
 }
