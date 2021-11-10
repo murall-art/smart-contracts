@@ -61,7 +61,7 @@ contract MintManager is AccessControl, ReentrancyGuard {
     ) external nonReentrant {
         require(amount > 0, "Amount must be greater than 0");
         require(mintMode == MINTMODE.PUBLIC, "Public minting not enabled");
-        require(value >= mintPricePublic, "Insufficient funds");
+        require(value >= mintPricePublic * amount, "Insufficient funds");
         require(amount <= MAX_MINTABLE_PER_TX, "Amount exceeds allowance per tx");
         require(
             token.balanceOf(minterAddress) + amount <= MAX_MINTABLE_PUBLIC,
@@ -84,7 +84,7 @@ contract MintManager is AccessControl, ReentrancyGuard {
         );
         require(mintMode == MINTMODE.PRESALE, "Presale minting not enabled");
         require(address(presaleManager) != address(0), "Merkle root not set");
-        require(value >= mintPricePresale, "Insufficient funds");
+        require(value >= mintPricePresale * amountDesired, "Insufficient funds");
         require(!presaleManager.hasClaimed(index), "Address already minted");
 
         // Verify the merkle proof.

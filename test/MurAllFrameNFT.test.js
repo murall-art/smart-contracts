@@ -565,126 +565,6 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                 assert.equal(frameContents.amount, 1)
             })
 
-            it('sending ERC721 NFT to Frame contract for frame you do not own fails', async () => {
-                const data = web3.eth.abi.encodeParameters(
-                    ['uint256', 'address'],
-                    [frameTokenIdUser, this.mockERC721.address]
-                )
-
-                await expectRevert(
-                    this.mockERC721.methods['safeTransferFrom(address,address,uint256,bytes)'](
-                        randomer,
-                        contract.address,
-                        tokenId,
-                        data,
-                        {
-                            from: randomer
-                        }
-                    ),
-                    'Owner of target frame does not own the contents'
-                )
-            })
-
-            it('sending ERC721 NFT to Frame contract for frame that already contains contents fails', async () => {
-                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC721.address, tokenId, 1, true, {
-                    from: randomer
-                })
-
-                await mintTestERC721TokenWithId(randomer, tokenId + 1)
-
-                const data = web3.eth.abi.encodeParameters(
-                    ['uint256', 'address'],
-                    [frameTokenIdRandomer, this.mockERC721.address]
-                )
-
-                await expectRevert(
-                    this.mockERC721.methods['safeTransferFrom(address,address,uint256,bytes)'](
-                        randomer,
-                        contract.address,
-                        tokenId + 1,
-                        data,
-                        {
-                            from: randomer
-                        }
-                    ),
-                    'Frame already contains bound content'
-                )
-                await this.mockERC721.transferFrom(randomer, contract.address, tokenId + 1, {
-                    from: randomer
-                })
-            })
-
-            it('sending ERC721 NFT to Frame contract with correct data sets contents', async () => {
-                const data = web3.eth.abi.encodeParameters(
-                    ['uint256', 'address'],
-                    [frameTokenIdRandomer, this.mockERC721.address]
-                )
-
-                await this.mockERC721.methods['safeTransferFrom(address,address,uint256,bytes)'](
-                    randomer,
-                    contract.address,
-                    tokenId,
-                    data,
-                    {
-                        from: randomer
-                    }
-                )
-
-                assert.isTrue(await contract.hasContentsInFrame(frameTokenIdRandomer))
-                const frameContents = await contract.frameContents(frameTokenIdRandomer)
-
-                assert.equal(frameContents.contractAddress, this.mockERC721.address)
-                assert.equal(frameContents.tokenId, tokenId)
-                assert.equal(frameContents.amount, 1)
-            })
-
-            it('sending ERC1155 NFT to Frame contract for frame you do not own fails', async () => {
-                const data = web3.eth.abi.encodeParameters(
-                    ['uint256', 'address'],
-                    [frameTokenIdUser, this.mockERC1155.address]
-                )
-
-                await expectRevert(
-                    this.mockERC1155.methods['safeTransferFrom(address,address,uint256,uint256,bytes)'](
-                        randomer,
-                        contract.address,
-                        tokenId,
-                        amount,
-                        data,
-                        {
-                            from: randomer
-                        }
-                    ),
-                    'Owner of target frame does not own the contents'
-                )
-            })
-
-            it('sending ERC1155 NFT to Frame contract for frame you do not own fails', async () => {
-                await contract.setFrameContents(frameTokenIdRandomer, this.mockERC1155.address, tokenId, amount, true, {
-                    from: randomer
-                })
-                await mintTestERC1155Token(randomer, tokenId + 1, amount)
-
-                const data = web3.eth.abi.encodeParameters(
-                    ['uint256', 'address'],
-                    [frameTokenIdRandomer, this.mockERC1155.address]
-                )
-
-                await expectRevert(
-                    this.mockERC1155.methods['safeTransferFrom(address,address,uint256,uint256,bytes)'](
-                        randomer,
-                        contract.address,
-                        tokenId + 1,
-                        amount,
-                        data,
-                        {
-                            from: randomer
-                        }
-                    ),
-                    'Frame already contains bound content'
-                )
-            })
-
             it('sending batch ERC1155 NFT to Frame contract fails', async () => {
                 const data = web3.eth.abi.encodeParameters(
                     ['uint256', 'address'],
@@ -703,31 +583,6 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                         }
                     )
                 )
-            })
-
-            it('sending ERC1155 NFT to Frame contract with correct data sets contents', async () => {
-                const data = web3.eth.abi.encodeParameters(
-                    ['uint256', 'address'],
-                    [frameTokenIdRandomer, this.mockERC1155.address]
-                )
-
-                await this.mockERC1155.methods['safeTransferFrom(address,address,uint256,uint256,bytes)'](
-                    randomer,
-                    contract.address,
-                    tokenId,
-                    amount,
-                    data,
-                    {
-                        from: randomer
-                    }
-                )
-
-                assert.isTrue(await contract.hasContentsInFrame(frameTokenIdRandomer))
-                const frameContents = await contract.frameContents(frameTokenIdRandomer)
-
-                assert.equal(frameContents.contractAddress, this.mockERC1155.address)
-                assert.equal(frameContents.tokenId, tokenId)
-                assert.equal(frameContents.amount, amount)
             })
 
             it('setFrameContents with ERC1155 NFT when frame already has contents fails', async () => {
@@ -871,6 +726,24 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             await contract.testFulfillRandomness(randomnessId, randomness, { from: owner })
         })
 
+        it('setCustomTraits disallowed when token ids array shorter than new traits length', async () => {
+            await expectRevert(
+                contract.setCustomTraits([1, 2, 3, 4], [0, 1, 2], {
+                    from: owner
+                }),
+                'Trait hash and indexes length mismatch'
+            )
+        })
+
+        it('setCustomTraits disallowed when token ids array longer than new traits length', async () => {
+            await expectRevert(
+                contract.setCustomTraits([1, 2], [0, 1, 2], {
+                    from: owner
+                }),
+                'Trait hash and indexes length mismatch'
+            )
+        })
+
         it('setCustomTraits from admin account sets traits randomising from trait seed', async () => {
             const expectedId = 2818
             await contract.mintId(owner, expectedId, { from: owner })
@@ -879,7 +752,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
             })
 
             const newTrait = toBN(1)
-            const receipt = await contract.setCustomTraits([newTrait], 0, {
+            const receipt = await contract.setCustomTraits([newTrait], [expectedId], {
                 from: owner
             })
 
@@ -920,7 +793,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
 
         it('setCustomTraits disallowed from non admin account', async () => {
             await expectRevert(
-                contract.setCustomTraits([1, 2, 3, 4], 0, {
+                contract.setCustomTraits([1, 2, 3, 4], [0, 0, 0, 0], {
                     from: randomer
                 }),
                 'Does not have admin role'
@@ -929,7 +802,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
 
         it('setCustomTraits disallowed when trait seed not set', async () => {
             await expectRevert(
-                contract.setCustomTraits([1, 2, 3, 4], 0, {
+                contract.setCustomTraits([1, 2, 3, 4], [0, 0, 0, 0], {
                     from: owner
                 }),
                 'Trait seed not set yet'
@@ -1023,6 +896,25 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                     from: owner
                 })
                 assert.equal(await contract.tokenURI(0), uri + '0')
+            })
+        })
+        describe('setContractUri', async () => {
+            it('setContractUri disallowed from non admin account', async () => {
+                await expectRevert(
+                    contract.setContractUri('some url', {
+                        from: randomer
+                    }),
+                    'Does not have admin role'
+                )
+            })
+
+            it.only('setContractUri from admin account sets base uri', async () => {
+                const uri = 'some url'
+                await contract.setContractUri(uri, {
+                    from: owner
+                })
+
+                assert.equal(await contract.contractURI(), uri)
             })
         })
     })

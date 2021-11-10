@@ -67,6 +67,8 @@ contract MurAllFrame is
     MintManager public mintManager;
     IRoyaltyGovernor public royaltyGovernorContract;
 
+    string public contractURI;
+
     mapping(uint256 => uint256) private customFrameTraits;
 
     struct FrameContents {
@@ -132,23 +134,33 @@ contract MurAllFrame is
         _registerInterface(IERC721Receiver(0).onERC721Received.selector);
     }
 
-    function setCustomTraits(uint256[] memory traitHash, uint256 startIndex) public onlyAdmin {
+    function setCustomTraits(uint256[] memory traitHash, uint256[] memory indexes) public onlyAdmin {
         require(traitSeed != 0, "Trait seed not set yet");
+        require(traitHash.length == indexes.length, "Trait hash and indexes length mismatch");
 
         for (uint256 i = 0; i < traitHash.length; ++i) {
-            uint256 randomIndex = (uint256(keccak256(abi.encode(traitSeed, i + startIndex))) % MAX_SUPPLY);
-            customFrameTraits[randomIndex] = traitHash[i];
+            customFrameTraits[indexes[i]] = traitHash[i];
         }
     }
 
     /**
-     * @notice Set the base URI for creating `tokenURI` for each MURALL NFT.
+     * @notice Set the base URI for creating `tokenURI` for each NFT.
      * Only invokable by admin role.
      * @param _tokenUriBase base for the ERC721 tokenURI
      */
     function setTokenUriBase(string calldata _tokenUriBase) external onlyAdmin {
         // Set the base for metadata tokenURI
         _setBaseURI(_tokenUriBase);
+    }
+
+    /**
+     * @notice Set the contract URI for marketplace data.
+     * Only invokable by admin role.
+     * @param _contractURI contract uri for this contract
+     */
+    function setContractUri(string calldata _contractURI) external onlyAdmin {
+        // Set the base for metadata tokenURI
+        contractURI = _contractURI;
     }
 
     /**
@@ -186,18 +198,13 @@ contract MurAllFrame is
         uint256 contentTokenId,
         uint256 contentAmount,
         bool bindContentToFrame
-    ) public {
+    ) public nonReentrant {
         require(ownerOf(_tokenId) == msg.sender, "Not token owner"); // this will also fail if the token does not exist
         if (bindContentToFrame) {
             require(!frameContents[_tokenId].bound, "Frame already contains bound content");
             if (contentContractAddress.supportsInterface(_INTERFACE_ID_ERC721)) {
                 // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
-                IERC721(contentContractAddress).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    contentTokenId,
-                    abi.encode(_tokenId, contentContractAddress)
-                );
+                IERC721(contentContractAddress).safeTransferFrom(msg.sender, address(this), contentTokenId, "");
             } else if (contentContractAddress.supportsInterface(_INTERFACE_ID_ERC1155)) {
                 // transfer ownership of the token to this contract (will fail if contract is not approved prior to this)
                 IERC1155(contentContractAddress).safeTransferFrom(
@@ -205,38 +212,25 @@ contract MurAllFrame is
                     address(this),
                     contentTokenId,
                     contentAmount,
-                    abi.encode(_tokenId, contentContractAddress)
+                    ""
                 );
             } else revert();
         } else {
             if (contentContractAddress.supportsInterface(_INTERFACE_ID_ERC721)) {
                 require(IERC721(contentContractAddress).ownerOf(contentTokenId) == msg.sender, "Not token owner");
-                createFrameContents(
-                    _tokenId,
-                    contentContractAddress,
-                    contentTokenId,
-                    contentAmount,
-                    bindContentToFrame
-                );
             } else if (contentContractAddress.supportsInterface(_INTERFACE_ID_ERC1155)) {
                 require(
                     IERC1155(contentContractAddress).balanceOf(msg.sender, contentTokenId) >= contentAmount,
                     "Not enough tokens"
                 );
-                createFrameContents(
-                    _tokenId,
-                    contentContractAddress,
-                    contentTokenId,
-                    contentAmount,
-                    bindContentToFrame
-                );
             } else {
                 revert();
             }
         }
+        createFrameContents(_tokenId, contentContractAddress, contentTokenId, contentAmount, bindContentToFrame);
     }
 
-    function removeFrameContents(uint256 _tokenId) public {
+    function removeFrameContents(uint256 _tokenId) public nonReentrant {
         require(ownerOf(_tokenId) == msg.sender, "Not token owner"); // this will also fail if the token does not exist
         require(hasContentsInFrame(_tokenId), "Frame does not contain any content"); // Also checks token exists
         FrameContents memory _frameContents = frameContents[_tokenId];
@@ -279,17 +273,6 @@ contract MurAllFrame is
         uint256 tokenId,
         bytes memory data
     ) public virtual override returns (bytes4) {
-        require(data.length != 0, "Invalid data - must contain target frame token id");
-        (uint256 targetFrameTokenId, address contractAddress) = abi.decode(data, (uint256, address));
-        require(ownerOf(targetFrameTokenId) == from, "Owner of target frame does not own the contents"); // this will also fail if the token does not exist
-        require(!frameContents[targetFrameTokenId].bound, "Frame already contains bound content");
-        require(
-            contractAddress.supportsInterface(_INTERFACE_ID_ERC721) &&
-                IERC721(contractAddress).ownerOf(tokenId) == address(this),
-            "Incorrect data"
-        );
-        createFrameContents(targetFrameTokenId, contractAddress, tokenId, 1, true);
-
         return this.onERC721Received.selector;
     }
 
@@ -300,17 +283,6 @@ contract MurAllFrame is
         uint256 amount,
         bytes memory data
     ) public virtual override returns (bytes4) {
-        require(data.length != 0, "Data must contain target frame id, owner and contract address");
-        (uint256 targetFrameTokenId, address contractAddress) = abi.decode(data, (uint256, address));
-        require(ownerOf(targetFrameTokenId) == from, "Owner of target frame does not own the contents"); // this will also fail if the token does not exist
-        require(!frameContents[targetFrameTokenId].bound, "Frame already contains bound content"); // Also checks token exists
-        require(
-            contractAddress.supportsInterface(_INTERFACE_ID_ERC1155) &&
-                IERC1155(contractAddress).balanceOf(address(this), tokenId) == amount,
-            "Incorrect data"
-        );
-        createFrameContents(targetFrameTokenId, contractAddress, tokenId, amount, true);
-
         return this.onERC1155Received.selector;
     }
 
