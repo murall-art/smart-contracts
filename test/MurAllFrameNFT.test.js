@@ -908,7 +908,7 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                 )
             })
 
-            it.only('setContractUri from admin account sets base uri', async () => {
+            it('setContractUri from admin account sets base uri', async () => {
                 const uri = 'some url'
                 await contract.setContractUri(uri, {
                     from: owner
