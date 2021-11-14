@@ -15,19 +15,12 @@ import {IERC2981} from "../royalties/IERC2981.sol";
 import {IRoyaltyGovernor} from "../royalties/IRoyaltyGovernor.sol";
 import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
 import {MintManager} from "../distribution/MintManager.sol";
+import {TraitSeedManager} from "./TraitSeedManager.sol";
 
 /**
  * MurAll Frame contract
  */
-contract MurAllFrame is
-    AccessControl,
-    ReentrancyGuard,
-    IERC2981,
-    VRFConsumerBase,
-    IERC721Receiver,
-    ERC1155Receiver,
-    ERC721
-{
+contract MurAllFrame is AccessControl, ReentrancyGuard, IERC2981, IERC721Receiver, ERC1155Receiver, ERC721 {
     bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     using Strings for uint256;
@@ -66,7 +59,7 @@ contract MurAllFrame is
     IFrameTraitManager public frameTraitManager;
     MintManager public mintManager;
     IRoyaltyGovernor public royaltyGovernorContract;
-
+    TraitSeedManager public traitSeedManager;
     string public contractURI;
 
     mapping(uint256 => uint256) private customFrameTraits;
@@ -79,11 +72,6 @@ contract MurAllFrame is
     }
 
     mapping(uint256 => FrameContents) public frameContents;
-
-    // for chainlink vrf
-    bytes32 internal keyHash;
-    uint256 internal fee;
-    uint256 public traitSeed;
 
     event RandomnessRequested(bytes32 requestId);
     event TraitSeedSet(uint256 seed);
@@ -122,12 +110,11 @@ contract MurAllFrame is
         address _linkTokenAddr,
         bytes32 _keyHash,
         uint256 _fee
-    ) public ERC721("Frames by MurAll", "FRAMES") VRFConsumerBase(_vrfCoordinator, _linkTokenAddr) {
+    ) public ERC721("Frames by MurAll", "FRAMES") {
         for (uint256 i = 0; i < admins.length; ++i) {
             _setupRole(ADMIN_ROLE, admins[i]);
         }
-        keyHash = _keyHash;
-        fee = _fee;
+        traitSeedManager = new TraitSeedManager(admins, _vrfCoordinator, _linkTokenAddr, _keyHash, _fee, 435, 252);
 
         // mintManager = new MintManager(this, admins, 436, 1004, 0.144 ether, 0.244 ether);
         mintManager = _mintManager;
@@ -135,7 +122,6 @@ contract MurAllFrame is
     }
 
     function setCustomTraits(uint256[] memory traitHash, uint256[] memory indexes) public onlyAdmin {
-        require(traitSeed != 0, "Trait seed not set yet");
         require(traitHash.length == indexes.length, "Trait hash and indexes length mismatch");
 
         for (uint256 i = 0; i < traitHash.length; ++i) {
@@ -187,7 +173,7 @@ contract MurAllFrame is
         if (customFrameTraits[_tokenId] != 0) {
             return customFrameTraits[_tokenId];
         } else {
-            require(traitSeed != 0, "Trait seed not set yet");
+            uint256 traitSeed = traitSeedManager.getTraitSeed(_tokenId);
             return uint256(keccak256(abi.encode(traitSeed, _tokenId)));
         }
     }
@@ -296,25 +282,6 @@ contract MurAllFrame is
         revert();
     }
 
-    /** Chainlink VRF ****************************/
-    function requestTraitSeed() public onlyAdmin nonReentrant {
-        require(traitSeed == 0, "Trait seed already requested");
-        require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK - fill contract with faucet");
-        bytes32 requestId = requestRandomness(keyHash, fee);
-
-        emit RandomnessRequested(requestId);
-    }
-
-    /**
-     * Callback function used by VRF Coordinator
-     */
-    function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
-        traitSeed = randomness;
-        emit TraitSeedSet(randomness);
-    }
-
-    /** END Chainlink VRF ****************************/
-
     function royaltyInfo(
         uint256 _tokenId,
         uint256 _value,
@@ -351,8 +318,9 @@ contract MurAllFrame is
 
     function mint(uint256 amount) public payable nonReentrant {
         mintManager.checkCanMintPublic(msg.sender, msg.value, amount);
+        uint256 maxId = traitSeedManager.getMaxIdForCurrentPhase();
         for (uint256 i = 0; i < amount; ++i) {
-            mintInternal(msg.sender);
+            mintInternal(msg.sender, maxId);
         }
     }
 
@@ -363,24 +331,27 @@ contract MurAllFrame is
         uint256 amountDesired
     ) public payable nonReentrant {
         mintManager.checkCanMintPresale(msg.sender, msg.value, index, maxAmount, merkleProof, amountDesired);
-
+        uint256 maxId = traitSeedManager.getMaxIdForCurrentPhase();
         uint256 amountToMint = maxAmount < amountDesired ? maxAmount : amountDesired;
         for (uint256 i = 0; i < amountToMint; ++i) {
-            mintInternal(msg.sender);
+            mintInternal(msg.sender, maxId);
         }
     }
 
     function mintInitial(uint256 amountToMint) public nonReentrant onlyAdmin returns (uint256) {
         mintManager.checkCanMintInitial(amountToMint);
+        uint256 maxId = traitSeedManager.getMaxIdForCurrentPhase();
         for (uint256 i = 0; i < amountToMint; ++i) {
-            mintInternal(msg.sender);
+            mintInternal(msg.sender, maxId);
         }
     }
 
-    function mintInternal(address account) private {
+    function mintInternal(address account, uint256 maxId) private {
         require(totalSupply() <= MAX_SUPPLY, "Maximum number of NFTs minted");
+
         // mint a new frame
         uint256 _id = totalSupply();
+        require(_id <= maxId, "Maximum number of NFTs for phase minted");
         _mint(account, _id);
         emit FrameMinted(_id, account);
     }

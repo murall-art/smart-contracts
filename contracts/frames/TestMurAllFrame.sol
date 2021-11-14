@@ -2,6 +2,7 @@
 pragma solidity ^0.6.0;
 
 import {MurAllFrame} from "./MurAllFrame.sol";
+import {TraitSeedManager} from "./TraitSeedManager.sol";
 import {MintManager} from "../distribution/MintManager.sol";
 
 contract TestMurAllFrame is MurAllFrame {
@@ -14,8 +15,8 @@ contract TestMurAllFrame is MurAllFrame {
         uint256 _fee
     ) public MurAllFrame(admins, _mintManager, _vrfCoordinator, _linkTokenAddr, _keyHash, _fee) {}
 
-    function testFulfillRandomness(bytes32 requestId, uint256 randomness) public {
-        fulfillRandomness(requestId, randomness);
+    function setTraitSeedManager(TraitSeedManager _traitSeedManager) public {
+        traitSeedManager = _traitSeedManager;
     }
 
     function mintId(address _to, uint256 _id) public {

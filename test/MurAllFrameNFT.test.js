@@ -5,6 +5,7 @@ const timeMachine = require('ganache-time-traveler')
 const { ZERO_ADDRESS } = require('@openzeppelin/test-helpers/src/constants')
 const MurAllFrame = artifacts.require('./frames/MurAllFrame.sol')
 const TestMurAllFrame = artifacts.require('./frames/TestMurAllFrame.sol')
+const TestTraitSeedManager = artifacts.require('./frames/TestTraitSeedManager.sol')
 const MockERC721 = artifacts.require('./mock/MockERC721.sol')
 const MockERC1155 = artifacts.require('./mock/MockERC1155.sol')
 const MockERC20 = artifacts.require('./mock/MockERC20.sol')
@@ -722,8 +723,17 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                     from: owner
                 }
             )
-
-            await contract.testFulfillRandomness(randomnessId, randomness, { from: owner })
+            this.traitSeedManager = await TestTraitSeedManager.new(
+                [owner],
+                VRF_COORDINATOR_RINKEBY,
+                LINK_TOKEN_RINKEBY,
+                KEYHASH_RINKEBY,
+                BigInt(FEE_RINKEBY),
+                INITIAL_MINTABLE,
+                252
+            )
+            await contract.setTraitSeedManager(this.traitSeedManager.address, { from: owner })
+            await this.traitSeedManager.testFulfillRandomness(randomnessId, randomness)
         })
 
         it('setCustomTraits disallowed when token ids array shorter than new traits length', async () => {
@@ -745,8 +755,10 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
         })
 
         it('setCustomTraits from admin account sets traits randomising from trait seed', async () => {
-            const expectedId = 2818
+            const expectedId = 2318
+            await this.traitSeedManager.addTraitSeedForRange(10, { from: owner })
             await contract.mintId(owner, expectedId, { from: owner })
+            await this.traitSeedManager
             let traits = await contract.getTraits(expectedId, {
                 from: owner
             })
@@ -764,15 +776,6 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
     })
 
     describe('Admin functions', async () => {
-        it('requestTraitSeed disallowed from non admin account', async () => {
-            await expectRevert(
-                contract.requestTraitSeed({
-                    from: randomer
-                }),
-                'Does not have admin role'
-            )
-        })
-
         it('setRoyaltyGovernor disallowed from non admin account', async () => {
             await expectRevert(
                 contract.setRoyaltyGovernor(ZERO_ADDRESS, {
@@ -797,15 +800,6 @@ contract('MurAllFrame', ([owner, user, randomer]) => {
                     from: randomer
                 }),
                 'Does not have admin role'
-            )
-        })
-
-        it('setCustomTraits disallowed when trait seed not set', async () => {
-            await expectRevert(
-                contract.setCustomTraits([1, 2, 3, 4], [0, 0, 0, 0], {
-                    from: owner
-                }),
-                'Trait seed not set yet'
             )
         })
 
