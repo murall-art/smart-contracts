@@ -82,7 +82,7 @@ contract TraitSeedManager is AccessControl, ReentrancyGuard, VRFConsumerBase {
             traitSeed = traitSeeds[0];
         } else {
             require(_tokenId <= rangeStart + traitSeeds.length * rangeSize, "Trait seed not set for token id");
-            traitSeed = traitSeeds[(_tokenId - rangeStart) / rangeSize];
+            traitSeed = traitSeeds[1 + (_tokenId - rangeStart) / rangeSize];
         }
     }
 

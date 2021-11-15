@@ -189,7 +189,7 @@ contract('TraitSeedManager', ([owner, user, randomer]) => {
 
         it('addTraitSeedForRange disallowed from non admin address', async () => {
             await expectRevert(
-                contract.addTraitSeedForRange({
+                contract.addTraitSeedForRange(1, {
                     from: randomer
                 }),
                 'Does not have admin role'
@@ -197,7 +197,7 @@ contract('TraitSeedManager', ([owner, user, randomer]) => {
         })
         it('addTraitSeedForRange disallowed when first trait seed is not set', async () => {
             await expectRevert(
-                contract.addTraitSeedForRange({
+                contract.addTraitSeedForRange(1, {
                     from: owner
                 }),
                 'Must have at least 1 trait seed'
@@ -225,7 +225,7 @@ contract('TraitSeedManager', ([owner, user, randomer]) => {
             })
 
             it('addTraitSeedForRange from admin account sets traits randomising from trait seed', async () => {
-                const receipt = await contract.addTraitSeedForRange({
+                const receipt = await contract.addTraitSeedForRange(1, {
                     from: owner
                 })
                 const newTraitSeed = await contract.getTraitSeedAt(1)
@@ -238,12 +238,54 @@ contract('TraitSeedManager', ([owner, user, randomer]) => {
                 assert.equal(await contract.getTraitSeedsLength(), 2)
             })
 
-            it('getTraitSeed for token id less than range start returns original seed', async () => {
-                const traitSeed = await contract.getTraitSeed(RANGE_START - 1, {
+            it('addTraitSeedForRange for amount adds that amount of trait seeds', async () => {
+                const amountToAdd = 2
+                const receipt = await contract.addTraitSeedForRange(amountToAdd, {
                     from: owner
                 })
 
-                expect(traitSeed).to.be.bignumber.not.equal(toBN(randomness))
+                assert.equal(await contract.getTraitSeedsLength(), 1 + amountToAdd)
+
+                const newTraitSeed1 = await contract.getTraitSeedAt(1)
+                const newTraitSeed2 = await contract.getTraitSeedAt(2)
+
+                expect(newTraitSeed1).to.be.bignumber.not.equal(toBN(randomness))
+                expect(newTraitSeed2).to.be.bignumber.not.equal(toBN(randomness))
+            })
+
+            it('getTraitSeed for token id less than range start returns original seed', async () => {
+                expect(
+                    await contract.getTraitSeed(RANGE_START - 1, {
+                        from: owner
+                    })
+                ).to.be.bignumber.equal(toBN(await contract.getTraitSeedAt(0)))
+                expect(
+                    await contract.getTraitSeed(0, {
+                        from: owner
+                    })
+                ).to.be.bignumber.equal(toBN(await contract.getTraitSeedAt(0)))
+            })
+
+            it('getTraitSeed for token id more than range start returns correct seed for given range', async () => {
+                const receipt = await contract.addTraitSeedForRange(2, {
+                    from: owner
+                })
+
+                expect(
+                    await contract.getTraitSeed(RANGE_START, {
+                        from: owner
+                    })
+                ).to.be.bignumber.equal(toBN(await contract.getTraitSeedAt(1)))
+                expect(
+                    await contract.getTraitSeed(RANGE_START + RANGE_SIZE - 1, {
+                        from: owner
+                    })
+                ).to.be.bignumber.equal(toBN(await contract.getTraitSeedAt(1)))
+                expect(
+                    await contract.getTraitSeed(RANGE_START + RANGE_SIZE, {
+                        from: owner
+                    })
+                ).to.be.bignumber.equal(toBN(await contract.getTraitSeedAt(2)))
             })
         })
     })
