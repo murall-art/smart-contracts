@@ -1,7 +1,7 @@
 require('dotenv').config() // Store environment-specific variable from '.env' to process.env
 const HDWalletProvider = require('@truffle/hdwallet-provider')
 const path = require('path')
-const { ETHEREUM_HOST, ETHEREUM_PORT, MNENOMIC, INFURA_API_KEY } = process.env
+const { ETHEREUM_HOST, ETHEREUM_PORT, MNENOMIC, INFURA_API_KEY, ETHERSCAN_API_KEY } = process.env
 
 module.exports = {
     // See <http://truffleframework.com/docs/advanced/configuration>
@@ -48,5 +48,11 @@ module.exports = {
             }
         }
     },
-    plugins: ['solidity-coverage']
+    plugins: [
+        'solidity-coverage',
+        'truffle-plugin-verify'
+    ],
+    api_keys: {
+        etherscan: ETHERSCAN_API_KEY
+    }
 }
