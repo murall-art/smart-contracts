@@ -1,5 +1,6 @@
 var MurAllFrame = artifacts.require('./frames/MurAllFrame.sol')
 var MintManager = artifacts.require('./distribution/MintManager.sol')
+var TraitSeedManager = artifacts.require('./frames/TraitSeedManager.sol')
 
 const LINK_TOKEN_RINKEBY = '0x01BE23585060835E02B77ef475b0Cc51aA1e0709'
 const LINK_TOKEN_MAINNET = '0x514910771AF9Ca656af840dff83E8264EcF986CA'
@@ -29,14 +30,14 @@ module.exports = async function (deployer, network, accounts) {
     const keyhash = network == 'mainnet' ? KEYHASH_MAINNET : KEYHASH_RINKEBY
     const fee = network == 'mainnet' ? FEE_MAINNET : FEE_RINKEBY
 
+    await deployer.deploy(TraitSeedManager, admins, vrfAddress, linkTokenAddress, keyhash, BigInt(fee), 252, 435)
+    TraitSeedManagerInstance = await TraitSeedManager.deployed()
+
     await deployer.deploy(
         MurAllFrame,
         admins,
         mintManagerInstance.address,
-        vrfAddress,
-        linkTokenAddress,
-        keyhash,
-        BigInt(fee)
+        TraitSeedManagerInstance.address
     )
 
     MurAllFrameInstance = await MurAllFrame.deployed()

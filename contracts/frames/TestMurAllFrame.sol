@@ -9,11 +9,8 @@ contract TestMurAllFrame is MurAllFrame {
     constructor(
         address[] memory admins,
         MintManager _mintManager,
-        address _vrfCoordinator,
-        address _linkTokenAddr,
-        bytes32 _keyHash,
-        uint256 _fee
-    ) public MurAllFrame(admins, _mintManager, _vrfCoordinator, _linkTokenAddr, _keyHash, _fee) {}
+        TraitSeedManager _traitSeedManager
+    ) public MurAllFrame(admins, _mintManager, _traitSeedManager) {}
 
     function setTraitSeedManager(TraitSeedManager _traitSeedManager) public {
         traitSeedManager = _traitSeedManager;

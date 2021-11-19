@@ -106,15 +106,13 @@ contract MurAllFrame is AccessControl, ReentrancyGuard, IERC2981, IERC721Receive
     constructor(
         address[] memory admins,
         MintManager _mintManager,
-        address _vrfCoordinator,
-        address _linkTokenAddr,
-        bytes32 _keyHash,
-        uint256 _fee
+        TraitSeedManager _traitSeedManager
     ) public ERC721("Frames by MurAll", "FRAMES") {
         for (uint256 i = 0; i < admins.length; ++i) {
             _setupRole(ADMIN_ROLE, admins[i]);
         }
-        traitSeedManager = new TraitSeedManager(admins, _vrfCoordinator, _linkTokenAddr, _keyHash, _fee, 435, 252);
+        // traitSeedManager = new TraitSeedManager(admins, _vrfCoordinator, _linkTokenAddr, _keyHash, _fee, 435, 252);
+        traitSeedManager = _traitSeedManager;
 
         // mintManager = new MintManager(this, admins, 436, 1004, 0.144 ether, 0.244 ether);
         mintManager = _mintManager;
