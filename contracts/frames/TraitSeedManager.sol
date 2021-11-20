@@ -78,11 +78,11 @@ contract TraitSeedManager is AccessControl, ReentrancyGuard, VRFConsumerBase {
 
     function getTraitSeed(uint256 _tokenId) public view returns (uint256 traitSeed) {
         require(traitSeeds.length > 0 && traitSeeds[0] != 0, "Must have at least 1 trait seed");
-        if (_tokenId < rangeStart) {
+        if (_tokenId <= rangeStart) {
             traitSeed = traitSeeds[0];
         } else {
             require(_tokenId <= rangeStart + traitSeeds.length * rangeSize, "Trait seed not set for token id");
-            traitSeed = traitSeeds[1 + (_tokenId - rangeStart) / rangeSize];
+            traitSeed = traitSeeds[(_tokenId - rangeStart - 1) / rangeSize];
         }
     }
 
