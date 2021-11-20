@@ -25,25 +25,23 @@ interface IFrameTraitManager {
         STYLE,
         MAIN_COLOUR,
         ACCENT_COLOUR,
+        ACCENT_SECONDARY_COLOR,
         CORNER,
         CONDITION,
         RIMS,
         TOP_DAMAGE,
         TOP_VARIATION,
-        TOP_COLOUR,
         TOP_OFFSET,
         BOTTOM_DAMAGE,
         BOTTOM_VARIATION,
-        BOTTOM_COLOUR,
         BOTTOM_OFFSET,
         LEFT_DAMAGE,
         LEFT_VARIATION,
-        LEFT_COLOUR,
         LEFT_OFFSET,
         RIGHT_DAMAGE,
         RIGHT_VARIATION,
-        RIGHT_COLOUR,
-        RIGHT_OFFSET
+        RIGHT_OFFSET,
+        SIGNATURE
     }
 
     function getTrait(TraitParameter traitParameter, uint256 traitHash) external view returns (uint256);
