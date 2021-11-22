@@ -99,7 +99,10 @@ contract MintManager is AccessControl, ReentrancyGuard {
     }
 
     function setPresaleMintingMerkleRoot(bytes32 merkleRoot) public onlyAdmin {
-        require(address(presaleManager) == address(0), "Merkle root already set");
+        if (address(presaleManager) != address(0)) {
+            delete presaleManager;
+        }
+
         presaleManager = new MerkleTokenClaimDataManager(merkleRoot);
         emit PresaleMerkleRootSet(merkleRoot);
     }
