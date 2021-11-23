@@ -22,6 +22,7 @@ import {TraitSeedManager} from "./TraitSeedManager.sol";
  */
 contract MurAllFrame is AccessControl, ReentrancyGuard, IERC2981, IERC721Receiver, ERC1155Receiver, ERC721 {
     bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 private constant TRAIT_MOD_ROLE = keccak256("TRAIT_MOD_ROLE");
 
     using Strings for uint256;
     using ERC165Checker for address;
@@ -90,6 +91,13 @@ contract MurAllFrame is AccessControl, ReentrancyGuard, IERC2981, IERC721Receive
         require(hasRole(ADMIN_ROLE, msg.sender), "Does not have admin role");
         _;
     }
+    
+    /** @dev Checks if sender address has admin role
+     */
+    modifier onlyTraitMod() {
+        require(hasRole(TRAIT_MOD_ROLE, msg.sender), "Does not have trait mod role");
+        _;
+    }
 
     event FrameContentsUpdated(
         uint256 indexed id,
@@ -111,6 +119,10 @@ contract MurAllFrame is AccessControl, ReentrancyGuard, IERC2981, IERC721Receive
         for (uint256 i = 0; i < admins.length; ++i) {
             _setupRole(ADMIN_ROLE, admins[i]);
         }
+
+        for (uint256 i = 0; i < admins.length; ++i) {
+            _setupRole(TRAIT_MOD_ROLE, admins[i]);
+        }
         // traitSeedManager = new TraitSeedManager(admins, _vrfCoordinator, _linkTokenAddr, _keyHash, _fee, 435, 252);
         traitSeedManager = _traitSeedManager;
 
@@ -119,10 +131,12 @@ contract MurAllFrame is AccessControl, ReentrancyGuard, IERC2981, IERC721Receive
         _registerInterface(IERC721Receiver(0).onERC721Received.selector);
     }
 
-    function setCustomTraits(uint256[] memory traitHash, uint256[] memory indexes) public onlyAdmin {
+    function setCustomTraits(uint256[] memory traitHash, uint256[] memory indexes) public onlyTraitMod {
         require(traitHash.length == indexes.length, "Trait hash and indexes length mismatch");
 
         for (uint256 i = 0; i < traitHash.length; ++i) {
+            require(indexes[i] < mintManager.NUM_INITIAL_MINTABLE(), "Cannot change trait hash for index");
+            require(customFrameTraits[indexes[i]] == 0, "Cannot change trait hash for index");
             customFrameTraits[indexes[i]] = traitHash[i];
         }
     }
