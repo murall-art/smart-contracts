@@ -8,7 +8,8 @@
     "lint": "solium --dir ./contracts",
     "lint:fix": "solium --dir ./contracts --fix",
     "build": "truffle compile --all",
-    "deploy": "./scripts/deploy.sh"
+    "deploy": "./scripts/deploy.sh",
+    "refreshOpensea": "./scripts/refresh_opensea_collection.js"
   },
   "private": true,
   "dependencies": {
