@@ -10,7 +10,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC2981} from "../royalties/IERC2981.sol";
 import {IRoyaltyGovernor} from "../royalties/IRoyaltyGovernor.sol";
-import "@chainlink/contracts/src/v0.6/VRFConsumerBase.sol";
 import {MintManager} from "../distribution/MintManager.sol";
 import {PaintToken} from "../PaintToken.sol";
 
@@ -19,15 +18,13 @@ import {PaintToken} from "../PaintToken.sol";
  */
 contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
     bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 private constant TRAIT_MOD_ROLE = keccak256("TRAIT_MOD_ROLE");
 
     using Strings for uint256;
     using ERC165Checker for address;
 
-    uint64 public immutable MAX_SUPPLY = 60;
+    uint256 public immutable MAX_SUPPLY;
 
     PaintToken public paintToken;
-
     MintManager public mintManager;
     IRoyaltyGovernor public royaltyGovernorContract;
 
@@ -37,7 +34,10 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
         uint256[] blockNumbers;
     }
 
-    uint256 public constant PRICE_PER_PIXEL = 500000000000000000;
+    uint256 public immutable GRID_WIDTH;
+    uint256 public immutable MAX_PIXEL_GROUPS;
+    uint256 public immutable PRICE_PER_PIXEL;
+    uint256 public immutable COVERAGE_COST;
 
     GridContents[] gridContents;
 
@@ -66,15 +66,12 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
     event RoyaltyGovernorContractChanged(address indexed royaltyGovernor);
     event GridNFTMinted(uint256 indexed id, address indexed owner);
     //Declare an Event for when canvas is written to
-    event Painted(
-        address indexed artist,
-        uint256 indexed tokenId,
-        uint256 indexed iteration,
-        uint256[] colorIndex,
-        uint256[] pixelGroups
-    );
+    event Painted(uint256 indexed tokenId, uint256 indexed iteration, uint256[] colorIndex, uint256[] pixelGroups);
 
     constructor(
+        uint256 gridWidth,
+        uint256 pricePerPixel,
+        uint256 maxSupply,
         address[] memory admins,
         MintManager _mintManager,
         PaintToken _tokenAddr
@@ -83,33 +80,34 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
             _setupRole(ADMIN_ROLE, admins[i]);
         }
 
-        for (uint256 i = 0; i < admins.length; ++i) {
-            _setupRole(TRAIT_MOD_ROLE, admins[i]);
-        }
         mintManager = _mintManager;
-
         paintToken = _tokenAddr;
+
+        MAX_SUPPLY = maxSupply;
+        GRID_WIDTH = gridWidth;
+        MAX_PIXEL_GROUPS = (gridWidth * gridWidth) / 32;
+        PRICE_PER_PIXEL = pricePerPixel;
+        COVERAGE_COST = (gridWidth * gridWidth) * pricePerPixel;
     }
 
     /**
+     * @param tokenId       - The token id to set pixels on
      * @param colorIndex    - Color index defining the 256 colors the pixels reference at display time (RGB565 format, 2 bytes per color)
-     * @param pixelGroups   - RGB pixels in groups of 32 (1 pixel reference every 1 byte) - 512 groups of 32 pixels creating a 128 x 128 pixel image
+     * @param pixelGroups   - RGB pixels in groups of 32 (1 pixel reference every 1 byte) - should equal MAX_PIXEL_GROUPS in length
      */
     function setPixels(
         uint256 tokenID,
-        uint256[] memory colorIndex,
-        uint256[] memory pixelGroups
+        uint256[] calldata colorIndex,
+        uint256[] calldata pixelGroups
     ) public nonReentrant onlyTokenOwner(tokenID) {
-        require(colorIndex.length <= 16, "colour index too large"); // max 256 colors in groups of 16 (16 groups of 16 colors = 256 colors)
-        require(pixelGroups.length == 512, "pixel groups too large"); // max 128 x 128 pixels
+        require(colorIndex.length <= 16 && colorIndex.length >= 1, "colour index invalid"); // max 256 colors in groups of 16 (16 groups of 16 colors = 256 colors)
+        require(pixelGroups.length == MAX_PIXEL_GROUPS, "pixel groups not correct size");
 
-        uint256 pixelCount = 32 * pixelGroups.length;
-
-        paintToken.burnFrom(msg.sender, PRICE_PER_PIXEL.mul(pixelCount));
+        paintToken.burnFrom(msg.sender, COVERAGE_COST);
 
         gridContents[tokenID].blockNumbers.push(block.number);
 
-        emit Painted(msg.sender, tokenID, gridContents[tokenID].blockNumbers.length, colorIndex, pixelGroups);
+        emit Painted(tokenID, gridContents[tokenID].blockNumbers.length, colorIndex, pixelGroups);
     }
 
     /**
