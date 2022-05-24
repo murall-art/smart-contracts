@@ -31,7 +31,7 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
     string public contractURI;
 
     struct GridContents {
-        uint256[] blockNumbers;
+        uint256 currentBlockNumber;
     }
 
     uint256 public immutable GRID_WIDTH;
@@ -66,7 +66,7 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
     event RoyaltyGovernorContractChanged(address indexed royaltyGovernor);
     event GridNFTMinted(uint256 indexed id, address indexed owner);
     //Declare an Event for when canvas is written to
-    event Painted(uint256 indexed tokenId, uint256 indexed iteration, uint256[] colorIndex, uint256[] pixelGroups);
+    event Painted(uint256 indexed tokenId, uint256[] colorIndex, uint256[] pixelGroups);
 
     constructor(
         uint256 gridWidth,
@@ -91,7 +91,7 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
     }
 
     /**
-     * @param tokenId       - The token id to set pixels on
+     * @param tokenID       - The token id to set pixels on
      * @param colorIndex    - Color index defining the 256 colors the pixels reference at display time (RGB565 format, 2 bytes per color)
      * @param pixelGroups   - RGB pixels in groups of 32 (1 pixel reference every 1 byte) - should equal MAX_PIXEL_GROUPS in length
      */
@@ -99,15 +99,15 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
         uint256 tokenID,
         uint256[] calldata colorIndex,
         uint256[] calldata pixelGroups
-    ) public nonReentrant onlyTokenOwner(tokenID) {
+    ) external nonReentrant onlyTokenOwner(tokenID) {
         require(colorIndex.length <= 16 && colorIndex.length >= 1, "colour index invalid"); // max 256 colors in groups of 16 (16 groups of 16 colors = 256 colors)
         require(pixelGroups.length == MAX_PIXEL_GROUPS, "pixel groups not correct size");
 
         paintToken.burnFrom(msg.sender, COVERAGE_COST);
 
-        gridContents[tokenID].blockNumbers.push(block.number);
+        gridContents[tokenID].currentBlockNumber = block.number;
 
-        emit Painted(tokenID, gridContents[tokenID].blockNumbers.length, colorIndex, pixelGroups);
+        emit Painted(tokenID, colorIndex, pixelGroups);
     }
 
     /**
@@ -189,7 +189,7 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
         require(totalSupply() <= MAX_SUPPLY, "Maximum number of NFTs minted");
 
         // create the grid contents
-        GridContents memory _gridNft = GridContents({blockNumbers: new uint256[](0)});
+        GridContents memory _gridNft = GridContents({currentBlockNumber: block.number});
 
         // push the grid nft to the array
         gridContents.push(_gridNft);
@@ -210,16 +210,7 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
     }
 
     function getCurrentGridContentsBlock(uint256 _tokenId) public view returns (uint256) {
-        return gridContents[_tokenId].blockNumbers[gridContents[_tokenId].blockNumbers.length - 1];
-    }
-
-    function getGridContentsAtIteration(uint256 _tokenId, uint256 iteration) public view returns (uint256) {
-        require(iteration < gridContents[_tokenId].blockNumbers.length, "Iteration out of range");
-        return gridContents[_tokenId].blockNumbers[iteration];
-    }
-
-    function getTotalGridContentsIterations(uint256 _tokenId) public view returns (uint256) {
-        return gridContents[_tokenId].blockNumbers.length;
+        return gridContents[_tokenId].currentBlockNumber;
     }
 
     fallback() external payable {}
