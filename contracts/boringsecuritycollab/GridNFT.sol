@@ -18,6 +18,7 @@ import {PaintToken} from "../PaintToken.sol";
  */
 contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
     bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes4 private constant _INTERFACE_ID_ERC1155 = 0xd9b67a26;
 
     using Strings for uint256;
     using ERC165Checker for address;
@@ -29,6 +30,10 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
     IRoyaltyGovernor public royaltyGovernorContract;
 
     string public contractURI;
+    address public allowTokenAddress;
+    uint256 public allowTokenId;
+
+    mapping(uint256 => bool) public freeForAllMode;
 
     struct GridContents {
         uint256 currentBlockNumber;
@@ -99,7 +104,12 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
         uint256 tokenID,
         uint256[] calldata colorIndex,
         uint256[] calldata pixelGroups
-    ) external nonReentrant onlyTokenOwner(tokenID) {
+    ) external nonReentrant {
+        if (freeForAllMode[tokenID]) {
+            require(IERC1155(allowTokenAddress).balanceOf(msg.sender, allowTokenId) >= 1, "Must have token to paint");
+        } else {
+            require(ownerOf(tokenID) == msg.sender, "Does not own token");
+        }
         require(colorIndex.length <= 16 && colorIndex.length >= 1, "colour index invalid"); // max 256 colors in groups of 16 (16 groups of 16 colors = 256 colors)
         require(pixelGroups.length == MAX_PIXEL_GROUPS, "pixel groups not correct size");
 
@@ -108,6 +118,10 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
         gridContents[tokenID].currentBlockNumber = block.number;
 
         emit Painted(tokenID, colorIndex, pixelGroups);
+    }
+
+    function setFreeForAllForToken(uint256 tokenID, bool freeForAll) external onlyTokenOwner(tokenID) {
+        freeForAllMode[tokenID] = freeForAll;
     }
 
     /**
@@ -156,24 +170,22 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
         return royaltyGovernorContract.royaltyInfo(_tokenId, _value, _data);
     }
 
+    /**
+     * @notice Set the token contract address and ID for the free for all mode.
+     * Only invokable by admin role.
+     * @param tokenAddress the token address
+     * @param tokenId the token id
+     */
+    function setAllowToken(address tokenAddress, uint256 tokenId) external onlyAdmin {
+        require(tokenAddress.supportsInterface(_INTERFACE_ID_ERC1155), "Token address does not support ERC1155");
+        allowTokenAddress = tokenAddress;
+        allowTokenId = tokenId;
+    }
+
     function mint(uint256 amount) public payable nonReentrant {
         mintManager.checkCanMintPublic(msg.sender, msg.value, amount);
 
         for (uint256 i = 0; i < amount; ++i) {
-            mintInternal(msg.sender);
-        }
-    }
-
-    function mintPresale(
-        uint256 index,
-        uint256 maxAmount,
-        bytes32[] calldata merkleProof,
-        uint256 amountDesired
-    ) public payable nonReentrant {
-        mintManager.checkCanMintPresale(msg.sender, msg.value, index, maxAmount, merkleProof, amountDesired);
-
-        uint256 amountToMint = maxAmount < amountDesired ? maxAmount : amountDesired;
-        for (uint256 i = 0; i < amountToMint; ++i) {
             mintInternal(msg.sender);
         }
     }
@@ -189,7 +201,7 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
         require(totalSupply() <= MAX_SUPPLY, "Maximum number of NFTs minted");
 
         // create the grid contents
-        GridContents memory _gridNft = GridContents({currentBlockNumber: block.number});
+        GridContents memory _gridNft = GridContents({currentBlockNumber: 0});
 
         // push the grid nft to the array
         gridContents.push(_gridNft);
