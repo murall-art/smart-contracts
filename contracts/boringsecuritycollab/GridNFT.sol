@@ -7,16 +7,15 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {IERC2981} from "../royalties/IERC2981.sol";
-import {IRoyaltyGovernor} from "../royalties/IRoyaltyGovernor.sol";
 import {MintManager} from "../distribution/MintManager.sol";
 import {PaintToken} from "../PaintToken.sol";
 
 /**
  * Boring Security Grid NFT contract
  */
-contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
+contract GridNFT is AccessControl, ReentrancyGuard, Ownable, ERC721 {
     bytes32 private constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes4 private constant _INTERFACE_ID_ERC1155 = 0xd9b67a26;
 
@@ -27,11 +26,13 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
 
     PaintToken public paintToken;
     MintManager public mintManager;
-    IRoyaltyGovernor public royaltyGovernorContract;
 
     string public contractURI;
     address public allowTokenAddress;
+    address public majorShareAddress;
+    address public minorShareAddress;
     uint256 public allowTokenId;
+    uint256 public mintPaintReward;
 
     mapping(uint256 => bool) public freeForAllMode;
 
@@ -68,7 +69,6 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
         _;
     }
 
-    event RoyaltyGovernorContractChanged(address indexed royaltyGovernor);
     event GridNFTMinted(uint256 indexed id, address indexed owner);
     //Declare an Event for when canvas is written to
     event Painted(uint256 indexed tokenId, uint256[] colorIndex, uint256[] pixelGroups);
@@ -78,12 +78,17 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
         uint256 pricePerPixel,
         uint256 maxSupply,
         address[] memory admins,
+        address _majorShareAddress,
+        address _minorShareAddress,
         MintManager _mintManager,
         PaintToken _tokenAddr
     ) public ERC721("Boring Security Grid - powered by MurAll", "GRID") {
         for (uint256 i = 0; i < admins.length; ++i) {
             _setupRole(ADMIN_ROLE, admins[i]);
         }
+
+        majorShareAddress = _majorShareAddress;
+        minorShareAddress = _minorShareAddress;
 
         mintManager = _mintManager;
         paintToken = _tokenAddr;
@@ -144,30 +149,8 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
         contractURI = _contractURI;
     }
 
-    /**
-     * @notice Set the Royalty Governer for creating `tokenURI` for each NFT.
-     * Only invokable by admin role.
-     * @param _royaltyGovAddr the address of the Royalty Governer contract
-     */
-    function setRoyaltyGovernor(IRoyaltyGovernor _royaltyGovAddr) external onlyAdmin {
-        royaltyGovernorContract = _royaltyGovAddr;
-        emit RoyaltyGovernorContractChanged(address(_royaltyGovAddr));
-    }
-
-    function royaltyInfo(
-        uint256 _tokenId,
-        uint256 _value,
-        bytes calldata _data
-    )
-        external
-        override
-        returns (
-            address _receiver,
-            uint256 _royaltyAmount,
-            bytes memory _royaltyPaymentData
-        )
-    {
-        return royaltyGovernorContract.royaltyInfo(_tokenId, _value, _data);
+    function setMintPaintReward(uint256 _mintPaintReward) external onlyAdmin {
+        mintPaintReward = _mintPaintReward;
     }
 
     /**
@@ -177,9 +160,19 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
      * @param tokenId the token id
      */
     function setAllowToken(address tokenAddress, uint256 tokenId) external onlyAdmin {
-        require(tokenAddress.supportsInterface(_INTERFACE_ID_ERC1155), "Token address does not support ERC1155");
+        // require(tokenAddress.supportsInterface(_INTERFACE_ID_ERC1155), "Token address does not support ERC1155");
         allowTokenAddress = tokenAddress;
         allowTokenId = tokenId;
+    }
+
+    function setMajorShareAddress(address _majorShareAddress) external {
+        require(msg.sender == majorShareAddress, "Is not major share address");
+        majorShareAddress = _majorShareAddress;
+    }
+
+    function setMinorShareAddress(address _minorShareAddress) external {
+        require(msg.sender == minorShareAddress, "Is not minor share address");
+        minorShareAddress = _minorShareAddress;
     }
 
     function mint(uint256 amount) public payable nonReentrant {
@@ -187,6 +180,11 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
 
         for (uint256 i = 0; i < amount; ++i) {
             mintInternal(msg.sender);
+        }
+
+        uint256 balance = paintToken.balanceOf(address(this));
+        if (balance >= mintPaintReward * amount) {
+            paintToken.transfer(msg.sender, mintPaintReward * amount);
         }
     }
 
@@ -211,14 +209,21 @@ contract GridNFT is AccessControl, ReentrancyGuard, IERC2981, ERC721 {
         emit GridNFTMinted(_id, account);
     }
 
-    function withdrawFunds(address payable _to) public onlyAdmin {
-        (bool success, ) = _to.call{value: address(this).balance}("");
-        require(success, "Failed to transfer the funds, aborting.");
+    function withdrawFunds() public {
+        // 80/20 split
+        uint256 balance = address(this).balance;
+        uint256 adminBalance = balance / 5;
+        uint256 financeBalance = balance - adminBalance;
+
+        (bool success, ) = majorShareAddress.call{value: financeBalance}("");
+        (bool success2, ) = minorShareAddress.call{value: adminBalance}("");
+        require(success && success2, "Failed to transfer the funds, aborting.");
     }
 
-    function rescueTokens(address tokenAddress) public onlyAdmin {
+    function rescueTokens(address to, address tokenAddress) public {
+        require(msg.sender == majorShareAddress, "Is not major share address");
         uint256 balance = IERC20(tokenAddress).balanceOf(address(this));
-        require(IERC20(tokenAddress).transfer(msg.sender, balance), "rescueTokens: Transfer failed.");
+        require(IERC20(tokenAddress).transfer(to, balance), "rescueTokens: Transfer failed.");
     }
 
     function getCurrentGridContentsBlock(uint256 _tokenId) public view returns (uint256) {
